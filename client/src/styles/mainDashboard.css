@@ -1,0 +1,40 @@
+h1 {
+    font-size: 2rem;
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+}
+
+h2 {
+    font-size: 1.4rem;
+    margin-top: 0.8rem;
+}
+
+h3 {
+    text-align: start;
+}
+
+p {
+    text-align: start;
+    font-weight: 500;
+    font-size: 0.5rem;
+    padding-bottom: 0px;
+}
+
+.counter {
+    background-color: white;
+    border-radius: 15px;
+    padding-block: 5px;
+    padding-inline: 8px;
+    height: 100%;
+    position: relative;
+}
+
+.chart {
+    background-color: white;
+    border-radius: 15px;
+    flex: auto;
+    padding-top: 5px;
+    padding-left: 10px
+}
