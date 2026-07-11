@@ -10,6 +10,12 @@ lerna-debug.log*
 models/training/yoloModels/runs
 models/training/trackingModels/runs
 models/training/footballDataset
+models
+server/samabt_to_lspu.mp4
+videoData
+__pycache__/
+*.pyc
+
 
 node_modules
 dist

@@ -7,12 +7,10 @@ import time
 
 # VIDEO VARIABLES
 base_dir = Path(__file__).resolve().parent
-stream = Blueprint('stream', __name__)
+videoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
+capLock = threading.Lock()
+patimbaoStream = Blueprint('patimbaoStream', __name__)
 previousFrame = None
-
-stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
-stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
-stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
 
 
 # DEBUG ERROR LIST
@@ -24,22 +22,21 @@ stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
 # ADVANCING THE CAP TOO MUCH
 
 class streamControl:
-    def __init__(self, videoPath):
+    def __init__(self):
         self.cap = cv2.VideoCapture(videoPath)
-        self.CV = ComputerVisionComponent()
+        self.stopCV = ComputerVisionComponent()
         self.frame = None
         self.frameCount = 0
         self.previousFrame = None
 
         self.running = False
-        self.capLock = threading.Lock()
         self.threadCvLoop = None
         self.threadFrameLoop = None
 
     def cvLoop(self):
         
         while self.running:
-            with self.capLock:
+            with capLock:
                 ret, frame = self.cap.read()
 
             if not ret:
@@ -50,7 +47,7 @@ class streamControl:
             self.frame = frame
             self.frameCount += 1
             if self.frameCount % 1 == 0:
-                response = self.CV.inference(frame)
+                response = self.stopCV.inference(frame)
                 self.previousFrame = response
                 # return response
             
@@ -72,12 +69,18 @@ class streamControl:
             daemon = True
         )
 
+        self.threadFrameLoop = threading.Thread(
+            target = self.mjpegGenerator,
+            daemon = True
+        )
+
         self.threadCvLoop.start()
+        self.threadFrameLoop.start()
 
     def mjpegGenerator(self):
         while True:
 
-            frame = self.CV.returnFrame()
+            frame = self.stopCV.returnFrame()
             if frame is None:
                 time.sleep(0.05)
                 continue
@@ -92,76 +95,34 @@ class streamControl:
             time.sleep(0.03)
         
     def getStats(self):
-        return self.CV.returnStats()
+        return self.stopCV.returnStats()
     
     def updateFrontend(self):
-        data = self.CV.updateFrontend()
-        self.CV.newInterval()
+        data = self.stopCV.updateFrontend()
+        self.stopCV.newInterval()
         return data
             
 
 
-stobStream = streamControl(stolVideoPath)
-stopStream = streamControl(stopVideoPath)
-stosStream = streamControl(stosVideoPath)
+stopStream = streamControl()
 
-
-# SAMBAT TO BUBUKAL APIS
-@stream.route('/stob_stream_video')
-def stobDisplay():
-    return Response(
-        stobStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
-
-@stream.route("/stob_get_stat_data")
-def stolStatData():
-    return stobStream.getStats()
-    
-@stream.route('/stob_update_frontend')
-def stolUpdate():
-    return stobStream.updateFrontend()
-
-
-# SAMBAT TO PATIMBAO APIS
-@stream.route("/stop_stream_video")
+@patimbaoStream.route('/stop_stream_video')
 def stopDisplay():
     return Response(
         stopStream.mjpegGenerator(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
-@stream.route("/stop_get_stat_data")
-def getStopStatData():
+@patimbaoStream.route("/stop_get_stat_data")
+def stopStatData():
     return stopStream.getStats()
-
-@stream.route('/stop_update_frontend')
+    
+@patimbaoStream.route('/stop_update_frontend')
 def stopUpdate():
     return stopStream.updateFrontend()
 
-
-# SAMBAT TO SUNSTAR APIS
-@stream.route("/stos_stream_video")
-def stosDisplay():
-    return Response(
-        stosStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
-
-@stream.route("/stos_get_stat_data")
-def getStosStatData():
-    return stosStream.getStats()
-
-@stream.route('/stos_update_frontend')
-def stosUpdate():
-    return stosStream.updateFrontend()
-
-
-# SYSTEM START TRIGGER
-def startBackend():
-    stosStream.startCV()
-    stobStream.startCV()
+def stopStartBackend():
+    stopDisplay()
     stopStream.startCV()
-
 
 

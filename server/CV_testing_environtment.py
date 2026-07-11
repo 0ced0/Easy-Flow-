@@ -5,15 +5,27 @@ import threading;
 from pathlib import Path;
 from ultralytics import YOLO;
 
+
+# TARGET FEATURES
+
+# Per camera / per interval:
+# - flow
+# - average_speed_green
+# - discharge_speed
+# - right_turn_flow
+# - occupancy_proxy
+# - density_proxy
+
+
 base_dir = Path(__file__).resolve().parent
-modelPath = Path(base_dir/"../models/training/yoloModels/trainingBatch4/best.pt")
+modelPath = Path(base_dir/"../models/training/yoloModels/sModels/batch1Final/best.pt")
 byteTrack = Path(base_dir/"../models/training/bytetrack.yaml")
 model = YOLO(modelPath)
 capLock = threading.Lock()
 
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
-videoPath = Path(base_dir/"sambat_to_lspu.mp4")
+videoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
 cap = cv2.VideoCapture(videoPath)
 
 
@@ -24,7 +36,7 @@ def speedEstimation(startFrame, endFrame, vehicle):
     speed = 17/time
     return speed
 
-def speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame):
+def speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame, speed):
 
     startCP = trackVehicle(frame, vehicleCenter, startLine)[1]
     endCP = trackVehicle(frame, vehicleCenter, endLine)[1]
@@ -50,9 +62,9 @@ def speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, al
             if previousEndCP < 0 and currentEndCP > 0:
                 endFrame = frameCount
 
-    return startCP, endCP, startFrame, endFrame
+    return startCP, endCP, startFrame, endFrame, speed
 
-def VehicleCounterPosition(allVehicles, crossProduct ,crossProductReference, currentVehicleId, counter):
+def VehicleCounterPosition(allVehicles, crossProduct ,crossProductReference, currentVehicleId, vehicleCount):
 
     for vehicle in allVehicles:
 
@@ -61,16 +73,16 @@ def VehicleCounterPosition(allVehicles, crossProduct ,crossProductReference, cur
             previousCrossProduct = allVehicles[vehicle][crossProductReference]
             currentPosition = crossProduct
             if previousCrossProduct < 0 and currentPosition > 0:
-                counter += 1
+                vehicleCount += 1
                 crossProduct = currentPosition
-                return crossProduct, counter
+                return crossProduct, vehicleCount
             
             crossProduct = currentPosition
-            return crossProduct, counter
+            return crossProduct, vehicleCount
 
       
     crossProduct = crossProduct
-    return crossProduct, counter
+    return crossProduct, vehicleCount
 
 
 
@@ -91,8 +103,7 @@ def trackVehicle(frame, vehicleCenter, line):
     return frame, crossProduct
 
 
-def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, endLine, frameCount):
-    vehicleNumber = 0
+def displayVehicle(frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount):
     crossProductReference = "counterCrossProduct"
 
 
@@ -100,7 +111,6 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, 
     for box in boxes:
         
         # VEHICLE CHARACTERISTICS
-        vehicleNumber += 1
         vehicleClass = int(box.cls[0])
         vehicleName = model.names[vehicleClass]
         currentVehicleId = int(box.id[0])
@@ -125,14 +135,14 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, 
 
         startFrame = None
         endFrame = None
-        startCrossProduct, endCrossProduct, startFrame, endFrame = speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame)
+        speed = None
+        startCrossProduct, endCrossProduct, startFrame, endFrame, vehicleSpeed = speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame, speed)
 
         counterCrossProduct = 0
         if len(allVehicles) > 0:
-            counterCrossProduct, counter = VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, counter)
+            counterCrossProduct, vehicleCount = VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, vehicleCount)
 
         allVehicles[currentVehicleId] = {
-            "vehicleNumber" : vehicleNumber,
             "name" : vehicleName,
             "crossProduct" : crossProduct,
             "counterCrossProduct" : counterCrossProduct,
@@ -140,12 +150,12 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, 
             "endCrossProduct" : endCrossProduct,
             "startFrame" : startFrame,
             "endFrame" : endFrame,
-            # "speed" : vehicleSpeed,
+            "speed" : vehicleSpeed,
         }
 
         cv2.putText(
             frame,
-            f"{startFrame}",
+            f"{allVehicles[currentVehicleId]["name"]}",
             boxStart,
             cv2.FONT_HERSHEY_COMPLEX,
             0.5,
@@ -153,25 +163,25 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, 
             1
         )
 
-        cv2.putText(
-            frame,
-            f"{endFrame}",
-            boxEnd,
-            cv2.FONT_HERSHEY_COMPLEX,
-            0.5,
-            (0,0,0),
-            1
-        )
+    #     cv2.putText(
+    #         frame,
+    #         f"{endFrame}",
+    #         boxEnd,
+    #         cv2.FONT_HERSHEY_COMPLEX,
+    #         0.5,
+    #         (0,0,0),
+    #         1
+    #     )
 
-    cv2.putText(
-        frame,
-        f"VEHICLE COUNT: {counter}",
-        (100,100),
-        cv2.FONT_HERSHEY_COMPLEX,
-        0.4,
-        (0,0,0),
-        1
-    )
+    # cv2.putText(
+    #     frame,
+    #     f"VEHICLE COUNT: {vehicleCount}",
+    #     (100,100),
+    #     cv2.FONT_HERSHEY_COMPLEX,
+    #     0.4,
+    #     (0,0,0),
+    #     1
+    # )
 
     cv2.line(
         frame,
@@ -189,7 +199,7 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, counter, startLine, 
         1
     )
 
-    return frame, allVehicles, counter
+    return frame, allVehicles, vehicleCount
 
    
 
@@ -212,10 +222,14 @@ def runStream(cap):
             break 
         
         frameCount += 1
-        if frameCount % 3 == 0:
+        if frameCount % 1 == 0:
             # COUNTING LINE
-            newHeight = 700
-            newWidth = 1150
+
+            height, width = frame.shape[:2]
+
+            newHeight = int(height * 0.5)
+            newWidth = int(width * 0.5)
+
             lineX1 = int(newWidth * 0.2)
             lineY1 = int(newHeight*0.55)
             lineX2 = int(newWidth*0.7)
@@ -272,6 +286,9 @@ def runStream(cap):
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+    for vehicle in allVehicles:
+        print("ALL VEHICLE SPEEDS: \n", allVehicles[vehicle]["speed"])
      
         
     cap.release()
@@ -344,8 +361,6 @@ def streamVideo(frame, frameCount):
         image, 
         mimetype="image/jpeg"
     )
-
-
 
 def homography(cap):
     while (True):
@@ -420,3 +435,5 @@ def homography(cap):
 
     cap.release()
     cv2.destroyAllWindows()
+
+runStream(cap)
