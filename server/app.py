@@ -3,8 +3,7 @@ from flask import Blueprint;
 from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
 # from test import page;
-from sambat_to_bubukal_stream import stream;
-# from endpoints import
+from sambat_to_bubukal_stream import stream, startBackend;
 
 
 app = Flask(__name__)
@@ -14,11 +13,15 @@ CORS(app,
              "origin":["http://localhost:5173"]
          }
      })
+
 app.register_blueprint(stream)
 
 
+# print(app.url_map)
 
 if __name__=="__main__":
+    startBackend()
     app.run(debug=True)
+
     
     

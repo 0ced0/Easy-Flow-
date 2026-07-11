@@ -1,16 +1,39 @@
-export const runInference = async () => {
-    try {
-        return await fetch('http://127.0.0.1:5000/run_inference')
-    }
-    catch (error) {
-        return ("We got this error: ", error)
+// SAMBAT TO PATIMBAO APIS
+
+export const getStopStatData = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stop_get_stat_data')
+    }catch(error){
+        console.error(error)
     }
 }
 
-export const streamVideo = async () => {
-    try {
-        return await fetch('http://127.0.0.1:5000/stream_video')
-    } catch (error) {
-        return ("we got this error", error)
+export const stopUpdateFrontend = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stop_update_frontend')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+
+
+
+// // SAMBAT TO BUBUKAL/LSPU APIS
+
+export const getStobStatData = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stob_get_stat_data')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+export const stobUpdateFrontend = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stob_update_frontend')
+    }catch(error){
+        console.error(error)
     }
 }
