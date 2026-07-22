@@ -3,7 +3,7 @@ from flask import Blueprint;
 from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
 # from test import page;
-from sambat_to_bubukal_stream import stream, startBackend;
+from streamControl import stream, startBackend;
 
 
 app = Flask(__name__)

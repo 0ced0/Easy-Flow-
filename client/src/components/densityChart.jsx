@@ -2,16 +2,9 @@ import {BarChart, Bar, YAxis, XAxis, CartesianGrid, Tooltip, Legend} from 'recha
 import { RechartsDevtools } from '@recharts/devtools'
 
 
-const testData = [
-    {"page" :  "LSPU", "number" : 5, "total" : 50},
-    {"page" :  "PAT", "number" : 10, "total" : 50},
-    {"page" :  "BUK", "number" : 8, "total" : 50},
-    {"page" :  "MET", "number" : 15, "total" : 50},
-    ]
-
 export default function DensityChart ({densityData}) {
     return (
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col justify-center max-h-[30vh]">
             <p>Density</p>
             <div className="flex justify-center">
             <BarChart

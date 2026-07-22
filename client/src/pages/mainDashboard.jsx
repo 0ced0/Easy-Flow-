@@ -2,27 +2,38 @@ import '../styles/mainDashboard.css'
 import StatCard from '../components/statCards.jsx'
 import IntersectionModel from '../components/intersectionModel.jsx'
 import DensityChart from '../components/densityChart.jsx'
-import OccupancyChart from '../components/occupancyChart.jsx'
 import TrafficLightTimers from '../components/trafficLightTimers.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
 import { useEffect, useState } from 'react'
-import {getStobStatData, getStopStatData, stobUpdateFrontend, stopUpdateFrontend} from '../hooks/api'
+import {getStolStatData, getStopStatData, getStocStatData, getStosStatData, stolUpdateFrontend, stopUpdateFrontend, stocUpdateFrontend, stosUpdateFrontend} from '../hooks/api'
 import { BarChart } from 'recharts'
 
 
 export default function MainDashboard() {
+    const [stolVehicleNumbers, setStolVehicleNumbers] = useState(0)
+    const [stolStatData, setStolStatData] = useState()
+    const [stolAverageVehicleSpeed, setStolAverageVehicleSpeed] = useState(0)
+    const [stolVehicleFlow, setStolVehicleFlow] = useState(0)
+    
     const [stopVehicleNumbers, setStopVehicleNumbers] = useState(0)
-    const [stobVehicleNumbers, setStobVehicleNumbers] = useState(0)
-    const [statData, setStatData] = useState()
-    const [averageVehicleSpeed, setAverageVehicleSpeed] = useState(0)
+    const [stopStatData, setStopStatData] = useState()
+    const [stopAverageVehicleSpeed, setStopAverageVehicleSpeed] = useState(0)
+
+    const [stocVehicleNumbers, setStocVehicleNumbers] = useState(0)
+    const [stocStatData, setStocStatData] = useState()
+    const [stocAverageVehicleSpeed, setStocAverageVehicleSpeed] = useState(0)
+
+    const [stosVehicleNumbers, setStosVehicleNumbers] = useState(0)
+    const [stosStatData, setStosStatData] = useState()
+    const [stosAverageVehicleSpeed, setStosAverageVehicleSpeed] = useState(0)
+
     const [densityData, setDensityData] = useState([
-                    {"loc" : "BUK.", "den" : 0},
+                    {"loc" : "LSPU", "den" : 0},
                     {"loc" : "PAT.", "den" : 0},
-                    {"loc" : "COM.", "den" : 0},
+                    {"loc" : "BUK.", "den" : 0},
                     {"loc" : "SUN.",  "den" : 0},
                 ])
-    // const [frame, setFrame] = useState(null)
 
 
     useEffect(() => {
@@ -35,11 +46,21 @@ export default function MainDashboard() {
                 const stopStatResponse = await getStopStatData()
                 const stopStatJson = await stopStatResponse.json()
 
-                const stobStatResponse = await getStobStatData()
-                const stobStatJson = await stobStatResponse.json()
+                const stolStatResponse = await getStolStatData()
+                const stolStatJson = await stolStatResponse.json()
                 
-                setStopVehicleNumbers(stopStatJson.vehicleCount);
-                setStobVehicleNumbers(stobStatJson.vehicleCount)
+                const stocStatResponse =  await getStocStatData()
+                const stocStatJson = await stocStatResponse.json()
+
+                const stosStatResponse =  await getStosStatData()
+                const stosStatJson = await stosStatResponse.json()
+                // console.log(stocStatJson)
+
+                setStopVehicleNumbers(stopStatJson.vehicleCount)
+                setStolVehicleNumbers(stolStatJson.vehicleCount)
+                setStocVehicleNumbers(stocStatJson.vehicleCount)
+                setStosVehicleNumbers(stosStatJson.vehicleCount)
+
             }catch(error){
                 console.error(error)
             }
@@ -52,26 +73,70 @@ export default function MainDashboard() {
         const updateChartData = async () => {
             
             if(!isRunning) return
-
+            
             try{
-                const response = await stobUpdateFrontend()
-                const data = await response.json()
-                console.log(data)
 
-                setAverageVehicleSpeed(previous => {
-                    if (data.averageVehicleSpeed){
-                        return data.averageVehicleSpeed
+                const stolResponse = await stolUpdateFrontend()
+                const stolData = await stolResponse.json()
+
+                const stopResponse = await stopUpdateFrontend()
+                const stopData = await stopResponse.json()
+
+                const stocResponse = await stocUpdateFrontend()
+                const stocData = await stocResponse.json()
+
+                const stosResponse = await stosUpdateFrontend()
+                const stosData = await stosResponse.json()
+
+                console.log("LSPU", stolData)
+                console.log("PATIMBAO", stopData)
+                console.log("COMPLEX", stocData)
+                console.log("SUNSTAR", stosData)
+
+                setStolAverageVehicleSpeed(previous => {
+                    if (stolData.averageVehicleSpeed){
+                        return stolData.averageVehicleSpeed
                     }else{
                         return 0
                     }
                 })
 
-                setStatData(data.chartData)
+                setStopAverageVehicleSpeed(previous => {
+                    if (stopData.averageVehicleSpeed){
+                        return stopData.averageVehicleSpeed
+                    }else{
+                        return 0
+                    }
+                })
+
+                setStocAverageVehicleSpeed(previous => {
+                    if (stocData.averageVehicleSpeed){
+                        return stocData.averageVehicleSpeed
+                    }else{
+                        return 0
+                    }   
+                })
+
+                setStosAverageVehicleSpeed(previous => {
+                    if (stosData.averageVehicleSpeed){
+                        return stosData.averageVehicleSpeed
+                    }else{
+                        return 0
+                    }
+                })
+
+                setStolStatData(stolData.chartData)
+                setStopStatData(stopData.chartData)
+                setStocStatData(stocData.chartData)
+                setStosStatData(stosData.chartData)
+
+                setStolVehicleFlow(stolData.vehicleFlow)
+
                 setDensityData([
-                    {"loc" : "BUK.", "den" : data.density},
-                    {"loc" : "PAT.", "den" : 5},
-                    {"loc" : "COM.", "den" : 10},
-                    {"loc" : "SUN.",  "den" : 15},
+                    {"loc" : "LSPU.", "den" : stolData.density},
+                    {"loc" : "PAT.", "den" : stopData.density},
+                    {"loc" : "COM.", "den" : stocData.density},
+                    {"loc" : "SUN.",  "den" : stosData.density},
                 ])
 
             }catch(error){
@@ -106,7 +171,7 @@ export default function MainDashboard() {
             
 
             {/* Grid 2 */}
-            <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
+            <div className="w-[30%]   flex flex-col justify-between p-1 gap-3">
 
                 {/* Traffic Light Timers */}
                 <div>
@@ -114,10 +179,10 @@ export default function MainDashboard() {
                 </div>
 
                 {/* Stat 1 */}
-                <StatCard statData={statData} vehicleNumbers={stobVehicleNumbers} averageVehicleSpeed={averageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed}/>
 
                 {/* Stat 2 */}
-                <StatCard statData={statData} vehicleNumbers={stobVehicleNumbers} averageVehicleSpeed={averageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed}/>
             </div>
 
 
@@ -125,16 +190,15 @@ export default function MainDashboard() {
             <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
 
                 {/* Density and Occupancy Chart  */}
-                <div className="grid grid-cols-2 gap-2 p-2 pb-0 h-[30vh] bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] ">
+                <div className="gap-2 p-2 pb-0 h-[30vh] bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] ">
                     <DensityChart densityData={densityData}/>                    
-                    <OccupancyChart/>
                 </div>
 
                 {/* Stat 1 */}
-                <StatCard statData={statData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={averageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed}/>
 
                 {/* Stat 2 */}
-                <StatCard statData={statData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={averageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed}/>
             </div>
         </div>
     )

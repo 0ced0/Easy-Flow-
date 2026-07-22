@@ -15,6 +15,13 @@ h3 {
     text-align: start;
 }
 
+h4 {
+    position: absolute;
+    right: 0;
+    left: 0;
+    bottom:0.5vh;
+}
+
 p {
     text-align: center;
     font-weight: 600;
@@ -45,7 +52,7 @@ p {
 /* className="bg-black text-red-700 */
 
 .timer {
-    padding: 15px;
+    padding: 8px;
     background-color: black;
     color: red;
     border-radius: 10px;

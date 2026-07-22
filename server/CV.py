@@ -4,7 +4,10 @@ import cv2;
 import threading;
 from pathlib import Path;
 from ultralytics import YOLO;
-import base64
+import time
+from datetime import datetime
+from database import databaseConnector
+
 
 # TARGET FEATURES
 
@@ -38,14 +41,20 @@ cap = cv2.VideoCapture(videoPath)
 
 class ComputerVisionComponent:
 
-    def __init__(self):
+    def __init__(self, cameraId): 
+        self.cameraId = cameraId
         self.frameCount = 0
         self.allVehicles = {}
         self.vehicleCount = 0
         self.timer = 0
         self.frame = None
         self.chartData = []
-        self.model = YOLO(modelPath)
+        self.model = YOLO(modelPath)    
+        self.start = time.perf_counter() 
+        self.frameTime = 0
+        self.averageSpeed = 0
+        self.intervalStart = 0
+        self.intervalEnd = 0
 
     def calculateFlow(self):
         vehicleCount = self.vehicleCount
@@ -53,12 +62,97 @@ class ComputerVisionComponent:
 
         flow = (vehicleCount/timeInterval) * 3600
         return flow
-        
-    def calculateDensity(self, vehicleFlow, averageSpeed):
-        density = None
     
-        if averageSpeed:
-            density = vehicleFlow/averageSpeed
+    def violationDetection(self, counterCrossProduct, allVehicles, currentVehicleId):
+        motion = True
+
+        for vehicle in allVehicles:
+            lastCP = allVehicles[currentVehicleId]["lastCp"]
+
+        if lastCP:
+        
+            currentCP = counterCrossProduct
+            cpRangeNegative = lastCP - 100
+            cpRangePositive = lastCP + 100
+            lastCP = currentCP
+
+            if currentCP > cpRangeNegative and currentCP < cpRangePositive:
+                motion = False
+                return motion, lastCP
+            
+            return motion, lastCP
+
+        lastCP = counterCrossProduct
+        return motion, lastCP
+
+        
+
+
+
+
+    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation):
+        crossProductReference = "counterCrossProduct"
+
+        # DISPLAYING ALL VEHICLES
+        for box in boxes:
+            
+            if box.id is None:
+                continue
+
+            # VEHICLE CHARACTERISTICS
+            vehicleClass = int(box.cls[0])
+            vehicleName = self.model.names[vehicleClass]
+            currentVehicleId = int(box.id.item())   
+
+            # VEHICLE COORDINATES
+            x1,y1,x2,y2 = map(int, box.xyxy[0])
+            boxStart = (x1,y1)
+            boxEnd = (x2,y2)
+            cx = (x1+x2) // 2
+            cy = (y1+y2) // 2
+            vehicleCenter = (cx,cy)
+
+            frame, crossProduct = self.trackVehicle(frame, vehicleCenter, countingLine)
+
+            startTime = None
+            endTime = None
+            speed = None
+            startCrossProduct, endCrossProduct, vehicleSpeed, startTime, endTime = self.speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, speed, startTime, endTime)
+
+            counterCrossProduct = 0
+            if len(allVehicles) > 0:
+                counterCrossProduct, vehicleCount = self.VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, vehicleCount, crossValidation)
+
+            # self.violationDetection(allVehicles)
+
+            allVehicles[currentVehicleId] = {
+                "name" : vehicleName,
+                "crossProduct" : crossProduct,
+                "counterCrossProduct" : counterCrossProduct,
+                "startCrossProduct" : startCrossProduct,
+                "endCrossProduct" : endCrossProduct,
+                "speed" : vehicleSpeed,
+                "startTime" : startTime,
+                "endTime" : endTime,
+                "lastFrameCount" : self.frameCount
+            }
+            
+        return frame, allVehicles, vehicleCount
+            
+    def calculateDensity(self, vehicleFlow, averageSpeed):
+        allVehicles = self.allVehicles
+        vehiclesInArea = 0
+        areaLength = 17 / 1000
+        
+        for vehicle in allVehicles:
+            startCp = allVehicles[vehicle]["startCrossProduct"]
+            endCp = allVehicles[vehicle]["endCrossProduct"]
+            lastFrameCount = allVehicles[vehicle]["lastFrameCount"]
+
+            if (self.frameCount - lastFrameCount <= 5 and startCp > 0 and endCp < 0):
+                vehiclesInArea += 1 
+
+        density = vehiclesInArea / areaLength
         
         return density
 
@@ -89,7 +183,15 @@ class ComputerVisionComponent:
         allVehicles = self.allVehicles
         vehicleFlow = self.calculateFlow()
         speedList, averageSpeed = self.calculateAverageSpeed()
+        speedMeasurementCount = 0
+        intervalStart = self.intervalStart
+        intervalEnd = datetime.now()
+
+        if (averageSpeed):
+            self.averageSpeed = averageSpeed
+
         density = self.calculateDensity(vehicleFlow, averageSpeed)
+        clock = self.start - time.perf_counter()
 
         if (density):
             density = round(density, 2)
@@ -100,19 +202,36 @@ class ComputerVisionComponent:
             self.timer += 30
         
         self.chartData.append(
-            {"time" : self.timer, "vehicleCount" : finalCount}
+            {"time" : self.timer, "vehicleFlow" : vehicleFlow}
         )
+
+
+        if len(speedList) > 0:
+            speedMeasurementCount = len(speedList)
+
+        trafficData = {
+            "cameraId" : self.cameraId,
+            "intervalStart" : intervalStart,
+            "intervalEnd" : intervalEnd,
+            "vehicleCount" : finalCount,
+            "trafficFlow" : vehicleFlow,
+            "averageSpeed" : averageSpeed,
+            "speedMeasurementCount" : speedMeasurementCount,
+            "spatialDensity" : density
+        }
+
+        databaseConnector.saveTrafficInterval(trafficData)
 
         return {
             "message" : "success",
-            # "finalCount" : finalCount,
-            # "timer" : int(self.timer),
-            "chartData" : self.chartData[-10:],
+            "finalCount" : finalCount,
+            "chartData" : self.chartData[-20:],
             "vehicleData" : allVehicles,
             "averageVehicleSpeed" : averageSpeed,
             "speedList" : speedList,
             "vehicleFlow" : vehicleFlow,
-            "density":density
+            "density":density,
+            "clock" : clock
         }
     
     def returnFrame(self):
@@ -142,62 +261,22 @@ class ComputerVisionComponent:
     def newInterval(self):
         self.vehicleCount = 0
         self.allVehicles = {}
+        self.intervalStart = datetime.now()
 
-    def inference(self, frame):
+    def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation):
         self.frameCount += 1
         self.frame = frame
+        self.frameTime = time.perf_counter()
 
         if self.frameCount % 2 == 0:
 
-            
-            height, width = frame.shape[:2]
-
-            newHeight = int(height * 0.5)
-            newWidth = int(width * 0.5)
-
-            # COUNTING LINE
-            lineX1 = int(newWidth * 0.2)
-            lineY1 = int(newHeight*0.55)
-            lineX2 = int(newWidth*0.7)
-            lineY2 = int(newHeight*0.85)
-
-            A = (lineX1,lineY1)
-            B = (lineX2,lineY2)
-
-            countingLine = (A,B)
-
-            # SPEED ESTIMATION START LINE
-            lineX1 = int(newWidth * 0.56)
-            lineY1 = int(newHeight * 0.32)
-            lineX2 = int(newWidth * 0.62)
-            lineY2 = int(newHeight * 0.33)
-
-
-            slA = (lineX1, lineY1)
-            slB = (lineX2, lineY2)
-
-            startLine = (slA,slB)
-
-
-            # SPEED ESTIMATION END LINE
-            lineX1 = int(newWidth * 0.05)
-            lineY1 = int(newHeight * 0.65)
-            lineX2 = int(newWidth * 0.3)
-            lineY2 = int(newHeight * 0.85)
-
-            elA = (lineX1, lineY1)
-            elB = (lineX2, lineY2)
-
-            endLine = (elA, elB)
-
             frame = cv2.resize(frame,(newWidth, newHeight))
 
-            results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack)
-
+            results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack, device=0)
             boxes = results[0].boxes
             
             if (boxes != None and len(boxes) > 0):
-                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount)        
+                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation)
                 
                 with capLock:
                     self.vehicleCount = vehicleCount
@@ -210,18 +289,16 @@ class ComputerVisionComponent:
                     if speed != None:
                         speedList.append(speed)
 
-
-    def speedEstimation(self, startFrame, endFrame, vehicle):
-        frameRate = 25
+    def speedEstimation(self, vehicle, startTime, endTime):
         msTOkmh = 3.6
-
-        overallFrames = endFrame - startFrame
-        time = overallFrames / frameRate
-        speed = (17/time) * msTOkmh
+        
+        elapsedTime =  endTime - startTime
+        
+        speed = (17/elapsedTime) * msTOkmh
 
         return speed
 
-    def speedEstimationArea(self, frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame, speed):
+    def speedEstimationArea(self, frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, speed, startTime, endTime):
 
         startCP = self.trackVehicle(frame, vehicleCenter, startLine)[1]
         endCP = self.trackVehicle(frame, vehicleCenter, endLine)[1]
@@ -230,32 +307,37 @@ class ComputerVisionComponent:
 
             if currentVehicleId == vehicle:
 
-                startFrame = allVehicles[vehicle]["startFrame"]
-                endFrame = allVehicles[vehicle]["endFrame"]
+                startTime = allVehicles[vehicle]["startTime"]
+                endTime = allVehicles[vehicle]["endTime"]
+
                 previousStartCP = allVehicles[vehicle]["startCrossProduct"]
                 previousEndCP = allVehicles[vehicle]["endCrossProduct"]
                 currentStartCP = startCP
                 currentEndCP = endCP
 
-                if (startFrame and endFrame):
-                    speed = self.speedEstimation(startFrame, endFrame, vehicle)
+                if (startTime and endTime):
+                    speed = self.speedEstimation( vehicle, startTime, endTime)
 
+                # DID THE VEHICLE CROSS THE START LINE?
                 if previousStartCP < 0 and currentStartCP > 0:
-                    startFrame = frameCount
+                    startTime = self.frameTime
 
+                # DID THE VEHICLE CROSS THE END LINE?
                 if previousEndCP < 0 and currentEndCP > 0:
-                    endFrame = frameCount
+                    endTime = self.frameTime
 
-        return startCP, endCP, startFrame, endFrame, speed
 
-    def VehicleCounterPosition(self, allVehicles, crossProduct ,crossProductReference, currentVehicleId, vehicleCount):
+        return startCP, endCP, speed, startTime, endTime
+
+    def VehicleCounterPosition(self, allVehicles, crossProduct ,crossProductReference, currentVehicleId, vehicleCount, crossValidation):
 
         for vehicle in allVehicles:
 
             if currentVehicleId == vehicle:
 
                 previousCrossProduct = allVehicles[vehicle][crossProductReference]
-                currentPosition = crossProduct
+                currentPosition = crossProduct * crossValidation
+
                 if previousCrossProduct < 0 and currentPosition > 0:
                     vehicleCount += 1
                     crossProduct = currentPosition
@@ -265,10 +347,11 @@ class ComputerVisionComponent:
                 return crossProduct, vehicleCount
 
         
-        crossProduct = crossProduct
+        crossProduct = crossProduct * crossValidation
         return crossProduct, vehicleCount
-
+    
     def trackVehicle(self, frame, vehicleCenter, line):
+
         A,B = line
         P = vehicleCenter
 
@@ -283,50 +366,4 @@ class ComputerVisionComponent:
         crossProduct = (Xab*Yap) - (Yab*Xap)
 
         return frame, crossProduct
-
-    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount):
-        crossProductReference = "counterCrossProduct"
-
-        # DISPLAYING ALL VEHICLES
-        for box in boxes:
-            
-            if box.id is None:
-                continue
-
-            # VEHICLE CHARACTERISTICS
-            vehicleClass = int(box.cls[0])
-            vehicleName = self.model.names[vehicleClass]
-            currentVehicleId = int(box.id.item())   
-
-            # VEHICLE COORDINATES
-            x1,y1,x2,y2 = map(int, box.xyxy[0])
-            boxStart = (x1,y1)
-            boxEnd = (x2,y2)
-            cx = (x1+x2) // 2
-            cy = (y1+y2) // 2
-            vehicleCenter = (cx,cy)
-
-            frame, crossProduct = self.trackVehicle(frame, vehicleCenter, countingLine)
-
-            startFrame = None
-            endFrame = None
-            speed = None
-            startCrossProduct, endCrossProduct, startFrame, endFrame, vehicleSpeed = self.speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, startFrame, endFrame, speed)
-
-            counterCrossProduct = 0
-            if len(allVehicles) > 0:
-                counterCrossProduct, vehicleCount = self.VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, vehicleCount)
-
-            allVehicles[currentVehicleId] = {
-                "name" : vehicleName,
-                "crossProduct" : crossProduct,
-                "counterCrossProduct" : counterCrossProduct,
-                "startCrossProduct" : startCrossProduct,
-                "endCrossProduct" : endCrossProduct,
-                "startFrame" : startFrame,
-                "endFrame" : endFrame,
-                "speed" : vehicleSpeed,
-            }
-            
-        return frame, allVehicles, vehicleCount
 

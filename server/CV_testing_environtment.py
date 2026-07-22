@@ -84,8 +84,6 @@ def VehicleCounterPosition(allVehicles, crossProduct ,crossProductReference, cur
     crossProduct = crossProduct
     return crossProduct, vehicleCount
 
-
-
 def trackVehicle(frame, vehicleCenter, line):
     A,B = line
     P = vehicleCenter
@@ -102,13 +100,14 @@ def trackVehicle(frame, vehicleCenter, line):
 
     return frame, crossProduct
 
-
 def displayVehicle(frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount):
     crossProductReference = "counterCrossProduct"
 
 
     # DISPLAYING ALL VEHICLES
     for box in boxes:
+        if box.id == None:
+            continue
         
         # VEHICLE CHARACTERISTICS
         vehicleClass = int(box.cls[0])
@@ -173,21 +172,21 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, vehicleCount, startL
     #         1
     #     )
 
-    # cv2.putText(
-    #     frame,
-    #     f"VEHICLE COUNT: {vehicleCount}",
-    #     (100,100),
-    #     cv2.FONT_HERSHEY_COMPLEX,
-    #     0.4,
-    #     (0,0,0),
-    #     1
-    # )
+    cv2.putText(
+        frame,
+        f"VEHICLE COUNT: {vehicleCount}",
+        (100,100),
+        cv2.FONT_HERSHEY_COMPLEX,
+        0.4,
+        (0,0,0),
+        1
+    )
 
     cv2.line(
         frame,
         startLine[0],
         startLine[1],
-        (0,0,0),
+        (0,700,0),
         1
     )
 
@@ -195,14 +194,11 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, vehicleCount, startL
         frame,
         endLine[0],
         endLine[1],
-        (0,100,100),
+        (0,700,0),
         1
     )
 
     return frame, allVehicles, vehicleCount
-
-   
-
 
 # RUN INFERENCE FOR BACKEND
 def runStream(cap):
@@ -222,24 +218,23 @@ def runStream(cap):
             break 
         
         frameCount += 1
-        if frameCount % 1 == 0:
-            # COUNTING LINE
+        if frameCount % 2 == 0:
 
             height, width = frame.shape[:2]
 
             newHeight = int(height * 0.5)
             newWidth = int(width * 0.5)
 
+            # COUNTING LINE  
             lineX1 = int(newWidth * 0.2)
             lineY1 = int(newHeight*0.55)
             lineX2 = int(newWidth*0.7)
             lineY2 = int(newHeight*0.85)
 
-            clA = (lineX1,lineY1)
-            clB = (lineX2,lineY2)
-    
-            countingLine = (clA,clB)
+            A = (lineX1,lineY1)
+            B = (lineX2,lineY2)
 
+            countingLine = (A,B)
 
             # SPEED ESTIMATION START LINE
             lineX1 = int(newWidth * 0.56)
@@ -286,10 +281,6 @@ def runStream(cap):
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
-    for vehicle in allVehicles:
-        print("ALL VEHICLE SPEEDS: \n", allVehicles[vehicle]["speed"])
-     
         
     cap.release()
     cv2.destroyAllWindows()
@@ -297,7 +288,6 @@ def runStream(cap):
         "message" : "PROCESS RAN SUCCESFULLY",
         "data" : vehicleCount
     }
-
 
 # RUN THE STREAM IN THE FRONTEND
 def streamVideo(frame, frameCount):

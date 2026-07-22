@@ -18,21 +18,57 @@ export const stopUpdateFrontend = async () => {
 
 
 
+// // SAMBAT TO LSPU APIS
 
-
-// // SAMBAT TO BUBUKAL/LSPU APIS
-
-export const getStobStatData = async () => {
+export const getStolStatData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stob_get_stat_data')
+        return await fetch('http://127.0.0.1:5000/stol_get_stat_data')
     }catch(error){
         console.error(error)
     }
 }
 
-export const stobUpdateFrontend = async () => {
+export const stolUpdateFrontend = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stob_update_frontend')
+        return await fetch('http://127.0.0.1:5000/stol_update_frontend')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+// SAMBAT TO COMPLEX APIS
+export const getStocStatData = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stoc_get_stat_data')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+export const stocUpdateFrontend = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stoc_update_frontend')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+
+
+// SAMBAT TO SUNSTAR APIS
+export const getStosStatData = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stos_get_stat_data')
+    }catch(error){
+        console.error(error)
+    }
+}
+
+export const stosUpdateFrontend = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/stos_update_frontend')
     }catch(error){
         console.error(error)
     }
