@@ -7,6 +7,8 @@ from ultralytics import YOLO;
 import time
 from datetime import datetime
 from database import databaseConnector
+from zoneinfo import ZoneInfo
+import math
 
 
 # TARGET FEATURES
@@ -20,15 +22,13 @@ from database import databaseConnector
 # - right_turn_flow
 
 
-
-
 # BUG LIST TO FIX
 
 # WHENEVER THE FRONTEND RESTARTS AND CALLS THE UPDATEFRONTEND FUNCTION, REGARDLESS OF TIME, IT ADDS ANOTHER ITEM TO THE CHARTDATA LIST 
 # WHICH RUINS THE CHART IN THE FRONTEND, NEED TO MAKE THE CHARTDATA INDEPENDENT AND USE REAL TIMER
 
 base_dir = Path(__file__).resolve().parent
-modelPath = Path(base_dir/"../models/training/yoloModels/sModels/batch1Final/best.pt")
+modelPath = Path(base_dir/"../models/training/yoloModels/sModels/trainingBatch2/best.pt")
 byteTrack = Path(base_dir/"../models/training/bytetrack.yaml")
 capLock = threading.Lock()
 
@@ -55,6 +55,9 @@ class ComputerVisionComponent:
         self.averageSpeed = 0
         self.intervalStart = 0
         self.intervalEnd = 0
+        self.violationList = {}
+        self.nextIntervalData = {}
+        self.intervalLock = threading.Lock()
 
     def calculateFlow(self):
         vehicleCount = self.vehicleCount
@@ -62,33 +65,56 @@ class ComputerVisionComponent:
 
         flow = (vehicleCount/timeInterval) * 3600
         return flow
-    
-    def violationDetection(self, counterCrossProduct, allVehicles, currentVehicleId):
-        motion = True
+
+    def cleanViolationList(self):
+        allVehicles = list(self.allVehicles.keys())
+        violationList = list(self.violationList.keys())
+
+        for vehicleId in violationList:
+            if vehicleId not in allVehicles:
+                del self.violationList[vehicleId] 
+        
+    def violationDetection(self):
+        allVehicles = self.allVehicles
+        violationList = self.violationList
+
+        self.cleanViolationList()
 
         for vehicle in allVehicles:
-            lastCP = allVehicles[currentVehicleId]["lastCp"]
+            if vehicle not in violationList:
+                violationList[vehicle] = {
+                    "vehicle" : allVehicles.get(vehicle).get("name"),
+                    "motion" : True,
+                    "violationStatus" : 0,
+                    "vehicleCenter" : allVehicles.get(vehicle).get("vehicleCenter")
+                } 
+                continue  
 
-        if lastCP:
-        
-            currentCP = counterCrossProduct
-            cpRangeNegative = lastCP - 100
-            cpRangePositive = lastCP + 100
-            lastCP = currentCP
+            currentLoc = allVehicles.get(vehicle).get("vehicleCenter")
+            lastLoc = violationList.get(vehicle).get("vehicleCenter")
 
-            if currentCP > cpRangeNegative and currentCP < cpRangePositive:
+            violationStatus = violationList.get(vehicle).get("violationStatus")
+
+            motion = True
+
+            movement = ((currentLoc[0] - lastLoc[0]), (currentLoc[1] - lastLoc[1]))
+            distanceMoved = math.hypot(movement[0], movement[1])
+
+            if distanceMoved < 100:
+                    
                 motion = False
-                return motion, lastCP
-            
-            return motion, lastCP
+                if violationStatus == 1:
+                    violationStatus = 2
+                elif violationStatus == 0:
+                    violationStatus = 1
 
-        lastCP = counterCrossProduct
-        return motion, lastCP
-
-        
-
-
-
+            violationList[vehicle] = {
+                "vehicle" : allVehicles.get(vehicle).get("name"),
+                "motion" : motion,
+                "violationStatus" : violationStatus,
+                "vehicleCenter" : currentLoc,
+                "distanceMoved" : distanceMoved
+            }
 
     def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation):
         crossProductReference = "counterCrossProduct"
@@ -99,12 +125,17 @@ class ComputerVisionComponent:
             if box.id is None:
                 continue
 
+            #LOGIC VARIABLES
+            startTime = None
+            endTime = None
+            speed = None
+
             # VEHICLE CHARACTERISTICS
             vehicleClass = int(box.cls[0])
             vehicleName = self.model.names[vehicleClass]
             currentVehicleId = int(box.id.item())   
 
-            # VEHICLE COORDINATES
+            # VEHICLE COORDINATES        
             x1,y1,x2,y2 = map(int, box.xyxy[0])
             boxStart = (x1,y1)
             boxEnd = (x2,y2)
@@ -114,16 +145,12 @@ class ComputerVisionComponent:
 
             frame, crossProduct = self.trackVehicle(frame, vehicleCenter, countingLine)
 
-            startTime = None
-            endTime = None
-            speed = None
             startCrossProduct, endCrossProduct, vehicleSpeed, startTime, endTime = self.speedEstimationArea(frame, startLine, endLine, vehicleCenter, frameCount, allVehicles, currentVehicleId, speed, startTime, endTime)
 
             counterCrossProduct = 0
             if len(allVehicles) > 0:
                 counterCrossProduct, vehicleCount = self.VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, vehicleCount, crossValidation)
-
-            # self.violationDetection(allVehicles)
+    
 
             allVehicles[currentVehicleId] = {
                 "name" : vehicleName,
@@ -134,7 +161,8 @@ class ComputerVisionComponent:
                 "speed" : vehicleSpeed,
                 "startTime" : startTime,
                 "endTime" : endTime,
-                "lastFrameCount" : self.frameCount
+                "lastFrameCount" : self.frameCount,
+                "vehicleCenter" : vehicleCenter
             }
             
         return frame, allVehicles, vehicleCount
@@ -179,13 +207,36 @@ class ComputerVisionComponent:
 
         return (speedList,averageSpeed)
 
-    def updateFrontend(self):
+    def returnIntervalData(self):
+        with self.intervalLock:
+            newInterval = self.nextIntervalData
+            
+        return{
+            "message" : "the fix is working!",
+            "finalCount" : newInterval.get("finalCount"),
+            "chartData" : newInterval.get("chartData"),
+            "vehicleData" : newInterval.get("vehicleData"),
+            "averageVehicleSpeed" : newInterval.get("averageVehicleSpeed"),
+            "speedList" : newInterval.get("speedList"),
+            "vehicleFlow" : newInterval.get("vehicleFlow"),
+            "density": newInterval.get("density"),
+            "clock" : newInterval.get("clock"),
+            "violationList" : newInterval.get("violationList")        
+        }
+
+    def saveInterval(self):
+
         allVehicles = self.allVehicles
+        violationList = self.violationList
+
         vehicleFlow = self.calculateFlow()
         speedList, averageSpeed = self.calculateAverageSpeed()
         speedMeasurementCount = 0
+
         intervalStart = self.intervalStart
         intervalEnd = datetime.now()
+        timeStamp = datetime.now(ZoneInfo("Asia/Manila")).strftime("%H:%M")
+
 
         if (averageSpeed):
             self.averageSpeed = averageSpeed
@@ -198,17 +249,17 @@ class ComputerVisionComponent:
             
         with capLock:
             finalCount =  self.vehicleCount
-            finalVehicles = self.allVehicles
-            self.timer += 30
         
         self.chartData.append(
-            {"time" : self.timer, "vehicleFlow" : vehicleFlow}
+            {"time" : timeStamp, "vehicleFlow" : vehicleFlow}
         )
-
 
         if len(speedList) > 0:
             speedMeasurementCount = len(speedList)
 
+
+
+        #Data for Database
         trafficData = {
             "cameraId" : self.cameraId,
             "intervalStart" : intervalStart,
@@ -222,17 +273,22 @@ class ComputerVisionComponent:
 
         databaseConnector.saveTrafficInterval(trafficData)
 
-        return {
-            "message" : "success",
-            "finalCount" : finalCount,
-            "chartData" : self.chartData[-20:],
-            "vehicleData" : allVehicles,
-            "averageVehicleSpeed" : averageSpeed,
-            "speedList" : speedList,
-            "vehicleFlow" : vehicleFlow,
-            "density":density,
-            "clock" : clock
-        }
+
+        #Data for frontend
+        with self.intervalLock:
+            self.nextIntervalData = {
+                "finalCount" : finalCount,
+                "chartData" : self.chartData[-20:],
+                "vehicleData" : allVehicles,
+                "averageVehicleSpeed" : averageSpeed,
+                "speedList" : speedList,
+                "vehicleFlow" : vehicleFlow,
+                "density":density,
+                "clock" : clock,
+                "violationList" : violationList
+            }
+
+        self.newInterval()
     
     def returnFrame(self):
         success, buffer = cv2.imencode(".jpg", self.frame)
@@ -255,7 +311,8 @@ class ComputerVisionComponent:
         return{
             "message" : "success",
             "vehicleCount" : self.vehicleCount,
-            "vehicleSpeeds" : speedList
+            "vehicleSpeeds" : speedList,
+            "allVehicles" : self.allVehicles
         }
     
     def newInterval(self):
@@ -267,17 +324,17 @@ class ComputerVisionComponent:
         self.frameCount += 1
         self.frame = frame
         self.frameTime = time.perf_counter()
-
-        if self.frameCount % 2 == 0:
+        # print("This are the vehicles detected: ", self.allVehicles)
+        if self.frameCount % 1 == 0:
 
             frame = cv2.resize(frame,(newWidth, newHeight))
 
-            results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack, device=0)
+            results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack, device=0, verbose=False)
             boxes = results[0].boxes
             
             if (boxes != None and len(boxes) > 0):
                 frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation)
-                
+
                 with capLock:
                     self.vehicleCount = vehicleCount
                 
@@ -330,12 +387,11 @@ class ComputerVisionComponent:
         return startCP, endCP, speed, startTime, endTime
 
     def VehicleCounterPosition(self, allVehicles, crossProduct ,crossProductReference, currentVehicleId, vehicleCount, crossValidation):
-
         for vehicle in allVehicles:
 
             if currentVehicleId == vehicle:
-
-                previousCrossProduct = allVehicles[vehicle][crossProductReference]
+       
+                previousCrossProduct = allVehicles.get(vehicle).get(crossProductReference)
                 currentPosition = crossProduct * crossValidation
 
                 if previousCrossProduct < 0 and currentPosition > 0:
@@ -346,7 +402,6 @@ class ComputerVisionComponent:
                 crossProduct = currentPosition
                 return crossProduct, vehicleCount
 
-        
         crossProduct = crossProduct * crossValidation
         return crossProduct, vehicleCount
     

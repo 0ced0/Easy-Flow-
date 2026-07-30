@@ -8,7 +8,7 @@ export default function DensityChart ({densityData}) {
             <p>Density</p>
             <div className="flex justify-center">
             <BarChart
-                style={{width: "90%", aspectRatio: 1}}
+                style={{width: "70%", aspectRatio: 1.65}}
                 responsive
                 data={densityData}
                 margin={{

@@ -10,16 +10,16 @@ base_dir = Path(__file__).resolve().parent
 stream = Blueprint('stream', __name__)
 previousFrame = None
 
-stolVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.78/live"
-stopVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.82/live"
-stosVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.92/live"
-stocVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.77/live"
+# stolVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.78/live"
+# stopVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.82/live"
+# stosVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.92/live"
+# stocVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.77/live"
 
 
-# stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
-# stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
-# stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
-# stocVideoPath = Path(base_dir/"videoData/sambat_to_bubukal.mp4")
+stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
+stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
+stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
+stocVideoPath = Path(base_dir/"videoData/sambat_to_bubukal.mp4")
 
 # DEBUG ERROR LIST
 # 
@@ -47,8 +47,11 @@ class streamControl:
         # THREADING VARIABLES
         self.running = False
         self.capLock = threading.Lock()
+        self.frameLock = threading.Lock()
         self.threadCvLoop = None
         self.threadCapLoop = None
+        self.threadSaveIntervalLoop = None
+        self.threadViolationMonitoringLoop = None
         self.timer = 0
 
         # LINE LOGIC VARIABLES
@@ -56,11 +59,22 @@ class streamControl:
         self.crossValidation = crossValidation
 
     def capLoop(self):
+
+        with self.capLock:
+        
+            fps = self.cap.get(cv2.CAP_PROP_FPS)
+
+            frameInterval = 1/fps if fps > 0 else 1/25
+            
         while self.running:
             
             with self.capLock:
+
+                intervalStartTime = time.perf_counter()
                 success, frame = self.cap.read()
-            
+
+
+
             if not success or frame is None:
                 print("capture failed, reconnecting")
 
@@ -70,14 +84,24 @@ class streamControl:
             
                 continue
 
-            with self.capLock:
+            with self.frameLock:
                 self.frame = frame
+                
+            elapsedTime = time.perf_counter() - intervalStartTime
+            sleepTime = max(0, frameInterval - elapsedTime)
+
+            time.sleep(sleepTime)
+            
+    def violationMonitoringLoop(self):
+        while self.running:
+            self.CV.violationDetection()
+            time.sleep(60)
 
     def cvLoop(self):
         
        while self.running:
 
-        with self.capLock:
+        with self.frameLock:
             if self.frame is None:
                 frame = None
             else:
@@ -87,15 +111,19 @@ class streamControl:
             time.sleep(0.01)
             continue
         
+        # print("cv loop running!")
         newWidth, newHeight, countingLine, startLine, endLine = self.lineFunction(frame)
 
         response = self.CV.inference(frame, newWidth, newHeight, countingLine, startLine, endLine, self.crossValidation)
-
-        self.previousFrame = response
     
         
         time.sleep(0.01)
-        
+
+    def saveIntervalLoop(self):
+        while self.running:
+            self.CV.saveInterval()
+            time.sleep(30)
+
     def startCV(self):
         if self.running:
             return
@@ -112,15 +140,28 @@ class streamControl:
             daemon=True
         )
 
+        self.threadViolationMonitoringLoop = threading.Thread(
+            target = self.violationMonitoringLoop,
+            daemon = True
+        )
+
+        self.threadSaveIntervalLoop = threading.Thread(
+            target= self.saveIntervalLoop,
+            daemon = True
+        )
+
         self.threadCapLoop.start()
         self.threadCvLoop.start()
+        self.threadViolationMonitoringLoop.start()
+        self.threadSaveIntervalLoop.start()
 
     def mjpegGenerator(self):
         while True:
 
-            with self.capLock:
-                success, buffer = cv2.imencode(".jpg", self.frame)
+            with self.frameLock:
+                frame = None if self.frame is None else self.frame.copy()
 
+            success, buffer = cv2.imencode(".jpg", frame)
             if not success:
                 return{
                     "message" : "error converting frame"
@@ -140,13 +181,12 @@ class streamControl:
             )
 
             time.sleep(0.03)
-        
+    
     def getStats(self):
         return self.CV.returnStats()
     
     def updateFrontend(self):
-        data = self.CV.updateFrontend()
-        self.CV.newInterval()
+        data = self.CV.returnIntervalData()
         return data
     
 
@@ -354,9 +394,6 @@ def stolStatData():
 def stolUpdate():
     return stolStream.updateFrontend()
 
-
-
-
 # SAMBAT TO PATIMBAO APIS
 @stream.route("/stop_stream_video")
 def stopDisplay():
@@ -423,6 +460,7 @@ def startBackend():
     stolStream.startCV()
     stopStream.startCV()
     stocStream.startCV()
+    print("SYSTEM START!")
 
 
 

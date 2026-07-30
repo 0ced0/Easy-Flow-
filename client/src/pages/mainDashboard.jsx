@@ -3,6 +3,7 @@ import StatCard from '../components/statCards.jsx'
 import IntersectionModel from '../components/intersectionModel.jsx'
 import DensityChart from '../components/densityChart.jsx'
 import TrafficLightTimers from '../components/trafficLightTimers.jsx'
+import ViolationMonitoring from '../components/violationMonitoring.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
 import { useEffect, useState } from 'react'
@@ -14,7 +15,6 @@ export default function MainDashboard() {
     const [stolVehicleNumbers, setStolVehicleNumbers] = useState(0)
     const [stolStatData, setStolStatData] = useState()
     const [stolAverageVehicleSpeed, setStolAverageVehicleSpeed] = useState(0)
-    const [stolVehicleFlow, setStolVehicleFlow] = useState(0)
     
     const [stopVehicleNumbers, setStopVehicleNumbers] = useState(0)
     const [stopStatData, setStopStatData] = useState()
@@ -30,9 +30,9 @@ export default function MainDashboard() {
 
     const [densityData, setDensityData] = useState([
                     {"loc" : "LSPU", "den" : 0},
-                    {"loc" : "PAT.", "den" : 0},
-                    {"loc" : "BUK.", "den" : 0},
-                    {"loc" : "SUN.",  "den" : 0},
+                    {"loc" : "PATIMBAO", "den" : 0},
+                    {"loc" : "BUBUKAL", "den" : 0},
+                    {"loc" : "SUNSTAR",  "den" : 0},
                 ])
 
 
@@ -54,12 +54,12 @@ export default function MainDashboard() {
 
                 const stosStatResponse =  await getStosStatData()
                 const stosStatJson = await stosStatResponse.json()
-                // console.log(stocStatJson)
 
                 setStopVehicleNumbers(stopStatJson.vehicleCount)
                 setStolVehicleNumbers(stolStatJson.vehicleCount)
                 setStocVehicleNumbers(stocStatJson.vehicleCount)
                 setStosVehicleNumbers(stosStatJson.vehicleCount)
+                // console.log(stolStatJson)
 
             }catch(error){
                 console.error(error)
@@ -129,14 +129,12 @@ export default function MainDashboard() {
                 setStopStatData(stopData.chartData)
                 setStocStatData(stocData.chartData)
                 setStosStatData(stosData.chartData)
-
-                setStolVehicleFlow(stolData.vehicleFlow)
-
+                
                 setDensityData([
-                    {"loc" : "LSPU.", "den" : stolData.density},
-                    {"loc" : "PAT.", "den" : stopData.density},
-                    {"loc" : "COM.", "den" : stocData.density},
-                    {"loc" : "SUN.",  "den" : stosData.density},
+                    {"loc" : "LSPU", "den" : stolData.density},
+                    {"loc" : "PATIMBAO", "den" : stopData.density},
+                    {"loc" : "COMPLEX", "den" : stocData.density},
+                    {"loc" : "SUNSTAR",  "den" : stosData.density},
                 ])
 
             }catch(error){
@@ -163,15 +161,14 @@ export default function MainDashboard() {
 
     return (
         <div className="flex space-x-1 m-1 h-[98vh]">
-            <div className="flex-row space-y-5 w-[40%] p-4 h-[97vh] text-center rounded-[15px]">
-            {/* <IntersectionModel/> */}
-                <VideoStream />
-                <VideoStream />
+            <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-5 h-[97.5vh] rounded-[15px]">
+                <VideoStream/>
+                <ViolationMonitoring />
             </div>
             
 
             {/* Grid 2 */}
-            <div className="w-[30%]   flex flex-col justify-between p-1 gap-3">
+            <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
 
                 {/* Traffic Light Timers */}
                 <div>
@@ -190,7 +187,7 @@ export default function MainDashboard() {
             <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
 
                 {/* Density and Occupancy Chart  */}
-                <div className="gap-2 p-2 pb-0 h-[30vh] bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] ">
+                <div className="gap-2 pt-2.5 bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] ">
                     <DensityChart densityData={densityData}/>                    
                 </div>
 

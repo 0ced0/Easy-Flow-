@@ -18,14 +18,14 @@ from ultralytics import YOLO;
 
 
 base_dir = Path(__file__).resolve().parent
-modelPath = Path(base_dir/"../models/training/yoloModels/sModels/batch1Final/best.pt")
+modelPath = Path(base_dir/"../models/training/yoloModels/sModels/trainingBatch2/best.pt")
 byteTrack = Path(base_dir/"../models/training/bytetrack.yaml")
 model = YOLO(modelPath)
 capLock = threading.Lock()
 
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
-videoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
+videoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
 cap = cv2.VideoCapture(videoPath)
 
 
@@ -154,7 +154,7 @@ def displayVehicle(frame, boxes, countingLine, allVehicles, vehicleCount, startL
 
         cv2.putText(
             frame,
-            f"{allVehicles[currentVehicleId]["name"]}",
+            f"{currentVehicleId}",
             boxStart,
             cv2.FONT_HERSHEY_COMPLEX,
             0.5,
@@ -218,52 +218,53 @@ def runStream(cap):
             break 
         
         frameCount += 1
-        if frameCount % 2 == 0:
+        if frameCount % 5 == 0:
 
             height, width = frame.shape[:2]
-
-            newHeight = int(height * 0.5)
-            newWidth = int(width * 0.5)
-
-            # COUNTING LINE  
-            lineX1 = int(newWidth * 0.2)
-            lineY1 = int(newHeight*0.55)
-            lineX2 = int(newWidth*0.7)
-            lineY2 = int(newHeight*0.85)
-
-            A = (lineX1,lineY1)
-            B = (lineX2,lineY2)
-
-            countingLine = (A,B)
-
+            
+            newHeight = int(height*0.5)
+            newWidth = int(width*0.5)
+        
+            # COUNTING LINE
+            lineX1 = int(newWidth * 0.1)
+            lineY1 = int(newHeight*0.97)
+            lineX2 = int(newWidth*0.68)
+            lineY2 = int(newHeight*0.4)
+        
+            clA = (lineX1,lineY1)
+            clB = (lineX2,lineY2)
+        
+            countingLine = (clA,clB)
+        
+        
             # SPEED ESTIMATION START LINE
-            lineX1 = int(newWidth * 0.56)
-            lineY1 = int(newHeight * 0.32)
-            lineX2 = int(newWidth * 0.62)
-            lineY2 = int(newHeight * 0.33)
-
-
+            lineX1 = int(newWidth * 0.04)
+            lineY1 = int(newHeight * 0.42)
+            lineX2 = int(newWidth * 0.14)
+            lineY2 = int(newHeight * 0.36)
+        
+        
             slA = (lineX1, lineY1)
             slB = (lineX2, lineY2)
-
+        
             startLine = (slA,slB)
-
-
+        
+        
             # SPEED ESTIMATION END LINE
-            lineX1 = int(newWidth * 0.05)
-            lineY1 = int(newHeight * 0.65)
-            lineX2 = int(newWidth * 0.3)
-            lineY2 = int(newHeight * 0.85)
-
+            lineX1 = int(newWidth * 0.1)
+            lineY1 = int(newHeight*0.98)
+            lineX2 = int(newWidth * 0.7)
+            lineY2 = int(newHeight * 0.4)
+        
             elA = (lineX1, lineY1)
             elB = (lineX2, lineY2)
-
+        
             endLine = (elA, elB)
 
 
             frame = cv2.resize(frame,(newWidth,newHeight))
 
-            results = model.track(frame, conf=0.25, persist=True, tracker=byteTrack)
+            results = model.track(frame, conf=0.05, persist=True, tracker=byteTrack, imgsz=640, verbose=False)
 
             boxes = results[0].boxes
 

@@ -29,11 +29,10 @@ export default function StatCard({loc, statData, vehicleNumbers, averageVehicleS
                     >
                         <CartesianGrid
                             vertical={false}
-                            // strokeDasharray="3 3"
-                            strokeOpacity="0.3"
+                            strokeOpacity="0.4"
                         />
                         <XAxis dataKey="time" tick={{ fontSize: 5 }} strokeDasharray='0 10' />
-                        <YAxis width="auto" tick={{ fontSize: 5 }} strokeDasharray='0 10' />
+                        <YAxis width={20} tick={{ fontSize: 5 }} strokeDasharray='0 10' />
 
                         <Line dataKey="vehicleFlow" stroke='blue' dot={false} />
 

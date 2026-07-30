@@ -2,10 +2,11 @@ from flask import Flask, Blueprint, render_template, abort;
 from flask import Blueprint;
 from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
-# from test import page;
+import logging
 from streamControl import stream, startBackend;
 
 
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 app = Flask(__name__)
 CORS(app,
      resources={
