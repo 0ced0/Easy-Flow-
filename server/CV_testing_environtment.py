@@ -25,7 +25,7 @@ capLock = threading.Lock()
 
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
-videoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
+videoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
 cap = cv2.VideoCapture(videoPath)
 
 
@@ -218,30 +218,30 @@ def runStream(cap):
             break 
         
         frameCount += 1
-        if frameCount % 5 == 0:
+        if frameCount % 3 == 0:
 
             height, width = frame.shape[:2]
             
             newHeight = int(height*0.5)
             newWidth = int(width*0.5)
         
-            # COUNTING LINE
-            lineX1 = int(newWidth * 0.1)
-            lineY1 = int(newHeight*0.97)
-            lineX2 = int(newWidth*0.68)
-            lineY2 = int(newHeight*0.4)
         
-            clA = (lineX1,lineY1)
-            clB = (lineX2,lineY2)
+            # COUNTING LINE  
+            lineX1 = int(newWidth * 0.2)
+            lineY1 = int(newHeight*0.55)
+            lineX2 = int(newWidth*0.7)
+            lineY2 = int(newHeight*0.85)
         
-            countingLine = (clA,clB)
+            A = (lineX1,lineY1)
+            B = (lineX2,lineY2)
         
+            countingLine = (A,B)
         
             # SPEED ESTIMATION START LINE
-            lineX1 = int(newWidth * 0.04)
-            lineY1 = int(newHeight * 0.42)
-            lineX2 = int(newWidth * 0.14)
-            lineY2 = int(newHeight * 0.36)
+            lineX1 = int(newWidth * 0.56)
+            lineY1 = int(newHeight * 0.32)
+            lineX2 = int(newWidth * 0.62)
+            lineY2 = int(newHeight * 0.33)
         
         
             slA = (lineX1, lineY1)
@@ -251,10 +251,10 @@ def runStream(cap):
         
         
             # SPEED ESTIMATION END LINE
-            lineX1 = int(newWidth * 0.1)
-            lineY1 = int(newHeight*0.98)
-            lineX2 = int(newWidth * 0.7)
-            lineY2 = int(newHeight * 0.4)
+            lineX1 = int(newWidth * 0.05)
+            lineY1 = int(newHeight * 0.65)
+            lineX2 = int(newWidth * 0.3)
+            lineY2 = int(newHeight * 0.85)
         
             elA = (lineX1, lineY1)
             elB = (lineX2, lineY2)
@@ -262,9 +262,19 @@ def runStream(cap):
             endLine = (elA, elB)
 
 
+            # POLYGON
+
+            polygonLines = np.array([
+                [int(newWidth * 0.53), int(newHeight * 0.25)], 
+                [int(newWidth * 0), int(newHeight * 0.6)], 
+                [int(newWidth * 0), int(newHeight * 1)],
+                [int(newWidth * 1), int(newHeight * 1)],
+                [int(newWidth * 1), int(newHeight * 0.5)], 
+                [int(newWidth * 0.75), int(newHeight * 0.28)]])
+
             frame = cv2.resize(frame,(newWidth,newHeight))
 
-            results = model.track(frame, conf=0.05, persist=True, tracker=byteTrack, imgsz=640, verbose=False)
+            results = model.track(frame, conf=0.5, persist=True, tracker=byteTrack, imgsz=640, verbose=False)
 
             boxes = results[0].boxes
 
@@ -276,6 +286,14 @@ def runStream(cap):
                 countingLine[1],
                 (255,0,0),
                 1
+            )
+
+            cv2.polylines(
+                frame,
+                [polygonLines],
+                True,
+                (0,0,0),
+                2
             )
 
             cv2.imshow('Sambat to LSPU', frame)
@@ -296,12 +314,14 @@ def streamVideo(frame, frameCount):
     counter = 0
     
     results = model.track(frame, conf=0.4, persist=True, tracker=byteTrack)
-    
 
-    newHeight = 700
-    newWidth = 1150
+    height, width = frame.shape[:2]
 
-    # COUNTING LINE
+    newHeight = int(height*0.5)
+    newWidth = int(width*0.5)
+
+
+    # COUNTING LINE  
     lineX1 = int(newWidth * 0.2)
     lineY1 = int(newHeight*0.55)
     lineX2 = int(newWidth*0.7)
@@ -312,21 +332,20 @@ def streamVideo(frame, frameCount):
 
     countingLine = (A,B)
 
-
     # SPEED ESTIMATION START LINE
-    lineX1 = int(newWidth * 0.5)
-    lineY1 = int(newHeight * 0.5)
-    lineX2 = int(newWidth * 0.3)
-    lineY2 = int(newHeight * 0.3)
+    lineX1 = int(newWidth * 0.56)
+    lineY1 = int(newHeight * 0.32)
+    lineX2 = int(newWidth * 0.62)
+    lineY2 = int(newHeight * 0.33)
 
 
-    A = (lineX1, lineY1)
-    B = (lineX2, lineY2)
+    slA = (lineX1, lineY1)
+    slB = (lineX2, lineY2)
 
-    startLine = (A,B)
+    startLine = (slA,slB)
 
 
-     # SPEED ESTIMATION END LINE
+    # SPEED ESTIMATION END LINE
     lineX1 = int(newWidth * 0.05)
     lineY1 = int(newHeight * 0.65)
     lineX2 = int(newWidth * 0.3)

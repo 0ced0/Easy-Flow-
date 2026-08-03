@@ -44,7 +44,7 @@ def saveTrafficInterval(data: dict) -> bool:
         cursor.execute(query, values)
         db.commit()
 
-        print(f'Saved interval for {data["cameraId"]}')
+        # print(f'Saved interval for {data["cameraId"]}')
         return True
 
     except Error as error:

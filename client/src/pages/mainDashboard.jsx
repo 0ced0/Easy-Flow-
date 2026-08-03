@@ -15,18 +15,23 @@ export default function MainDashboard() {
     const [stolVehicleNumbers, setStolVehicleNumbers] = useState(0)
     const [stolStatData, setStolStatData] = useState()
     const [stolAverageVehicleSpeed, setStolAverageVehicleSpeed] = useState(0)
+    const [stolIllegalParkingList, setStolIllegalParkingList] = useState()
+    const [stolIllegalLoadingUnloading, setStolIllegalLoadingUnloading] = useState()
     
     const [stopVehicleNumbers, setStopVehicleNumbers] = useState(0)
     const [stopStatData, setStopStatData] = useState()
     const [stopAverageVehicleSpeed, setStopAverageVehicleSpeed] = useState(0)
+    const [stopIllegalParkingList, setStopIllegalParkingList] = useState()
 
     const [stocVehicleNumbers, setStocVehicleNumbers] = useState(0)
     const [stocStatData, setStocStatData] = useState()
     const [stocAverageVehicleSpeed, setStocAverageVehicleSpeed] = useState(0)
+    const [stocIllegalParkingList, setStocIllegalParkingList] = useState()
 
     const [stosVehicleNumbers, setStosVehicleNumbers] = useState(0)
     const [stosStatData, setStosStatData] = useState()
     const [stosAverageVehicleSpeed, setStosAverageVehicleSpeed] = useState(0)
+    const [stosIllegalParkingList, setStosIllegalParkingList] = useState()
 
     const [densityData, setDensityData] = useState([
                     {"loc" : "LSPU", "den" : 0},
@@ -88,7 +93,7 @@ export default function MainDashboard() {
                 const stosResponse = await stosUpdateFrontend()
                 const stosData = await stosResponse.json()
 
-                console.log("LSPU", stolData)
+                console.log("LSPU",stolData)
                 console.log("PATIMBAO", stopData)
                 console.log("COMPLEX", stocData)
                 console.log("SUNSTAR", stosData)
@@ -129,7 +134,20 @@ export default function MainDashboard() {
                 setStopStatData(stopData.chartData)
                 setStocStatData(stocData.chartData)
                 setStosStatData(stosData.chartData)
-                
+
+                setStolIllegalParkingList(stolData.illegalParkingList)
+                setStopIllegalParkingList(stopData.illegalParkingList)
+                setStocIllegalParkingList(stocData.illegalParkingList)
+                setStosIllegalParkingList(stosData.illegalParkingList)
+
+                setStolIllegalLoadingUnloading({1 : 
+                    {"cameraId" : 1, 
+                    "violationType" : 1,
+                    "motion" : false, 
+                    "vehicle" : "Car", 
+                    "vehicleCenter" : (100,100), 
+                    "violationStatus" : 2}})
+
                 setDensityData([
                     {"loc" : "LSPU", "den" : stolData.density},
                     {"loc" : "PATIMBAO", "den" : stopData.density},
@@ -163,7 +181,11 @@ export default function MainDashboard() {
         <div className="flex space-x-1 m-1 h-[98vh]">
             <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-5 h-[97.5vh] rounded-[15px]">
                 <VideoStream/>
-                <ViolationMonitoring />
+                <ViolationMonitoring stolIllegalParkingList={stolIllegalParkingList} 
+                stopIllegalParkingList={stopIllegalParkingList} 
+                stocIllegalParkingList={stocIllegalParkingList} 
+                stosIllegalParkingList={stosIllegalParkingList}
+                stolIllegalLoadingUnloading={stolIllegalLoadingUnloading}/>
             </div>
             
 

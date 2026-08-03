@@ -9,6 +9,7 @@ from datetime import datetime
 from database import databaseConnector
 from zoneinfo import ZoneInfo
 import math
+import statistics
 
 
 # TARGET FEATURES
@@ -44,20 +45,22 @@ class ComputerVisionComponent:
     def __init__(self, cameraId): 
         self.cameraId = cameraId
         self.frameCount = 0
-        self.allVehicles = {}
         self.vehicleCount = 0
         self.timer = 0
-        self.frame = None
-        self.chartData = []
-        self.model = YOLO(modelPath)    
-        self.start = time.perf_counter() 
         self.frameTime = 0
         self.averageSpeed = 0
         self.intervalStart = 0
         self.intervalEnd = 0
-        self.violationList = {}
-        self.nextIntervalData = {}
+        self.frame = None
+        self.chartData = []
+        self.trafficMovement = []
+        self.model = YOLO(modelPath)    
+        self.start = time.perf_counter() 
         self.intervalLock = threading.Lock()
+        self.allVehicles = {}
+        self.nextIntervalData = {}
+        self.illegalParkingList = {}
+        self.illegalLoadingUnloadingList = {}
 
     def calculateFlow(self):
         vehicleCount = self.vehicleCount
@@ -66,56 +69,133 @@ class ComputerVisionComponent:
         flow = (vehicleCount/timeInterval) * 3600
         return flow
 
-    def cleanViolationList(self):
+    def cleanIllegalParkingList(self):
         allVehicles = list(self.allVehicles.keys())
-        violationList = list(self.violationList.keys())
+        violationList = list(self.illegalParkingList.keys())
 
         for vehicleId in violationList:
             if vehicleId not in allVehicles:
-                del self.violationList[vehicleId] 
-        
-    def violationDetection(self):
-        allVehicles = self.allVehicles
-        violationList = self.violationList
+                del self.illegalParkingList[vehicleId] 
 
-        self.cleanViolationList()
+    def cleanIllegalLoadingUnloadingList(self):
+        allVehicles = list(self.allVehicles.keys())
+        violationList = list(self.illegalLoadingUnloadingList.keys())
+
+        for vehicleId in violationList:
+            if vehicleId not in allVehicles:
+                del self.illegalLoadingUnloadingList[vehicleId]
+
+    def illegalParkingDetection(self):
+        allVehicles = self.allVehicles
+        violationList = self.illegalParkingList
+        timeStamp = datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p")
+        vehicleFlow = self.nextIntervalData.get("vehicleFlow")
+        self.cleanIllegalParkingList()
+        medianTrafficMovement, vehicleMovements = self.getTrafficMovement(allVehicles, violationList)
 
         for vehicle in allVehicles:
+            motion = True
             if vehicle not in violationList:
-                violationList[vehicle] = {
+                self.illegalParkingList[vehicle] = {
+                    "cameraId" : self.cameraId,
+                    "violationType" : 2,
                     "vehicle" : allVehicles.get(vehicle).get("name"),
-                    "motion" : True,
+                    "motion" : motion,
                     "violationStatus" : 0,
                     "vehicleCenter" : allVehicles.get(vehicle).get("vehicleCenter")
-                } 
+                }
                 continue  
 
-            currentLoc = allVehicles.get(vehicle).get("vehicleCenter")
-            lastLoc = violationList.get(vehicle).get("vehicleCenter")
-
+            vehicleCenter = allVehicles.get(vehicle).get("vehicleCenter")
+            distanceMoved = vehicleMovements.get(vehicle).get("movement")
             violationStatus = violationList.get(vehicle).get("violationStatus")
 
-            motion = True
-
-            movement = ((currentLoc[0] - lastLoc[0]), (currentLoc[1] - lastLoc[1]))
-            distanceMoved = math.hypot(movement[0], movement[1])
-
-            if distanceMoved < 100:
+            if distanceMoved < 100 and (medianTrafficMovement is None or medianTrafficMovement >= 10) and (vehicleFlow > 200):
                     
                 motion = False
-                if violationStatus == 1:
-                    violationStatus = 2
-                elif violationStatus == 0:
-                    violationStatus = 1
+                match violationStatus:
+                    case 1:
+                        violationStatus = 2
+                    case 0:
+                        violationStatus = 1
 
-            violationList[vehicle] = {
+
+            self.illegalParkingList[vehicle] = {
+                "cameraId" : self.cameraId,
+                "violationType" : 2,
                 "vehicle" : allVehicles.get(vehicle).get("name"),
                 "motion" : motion,
                 "violationStatus" : violationStatus,
-                "vehicleCenter" : currentLoc,
-                "distanceMoved" : distanceMoved
+                "distanceMoved" : distanceMoved,
+                "vehicleCenter" : vehicleCenter,
+                "timeStamp" : timeStamp
             }
 
+    def illegalLoadingUnloadingDetection(self):
+        allVehicles = self.allVehicles
+        violationList = self.illegalLoadingUnloadingList
+        timeStamp = datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p")
+
+        self.cleanIllegalLoadingUnloadingList()
+        medianTrafficMovement, vehicleMovements = self.getTrafficMovement(allVehicles, violationList)
+
+        for vehicleId in allVehicles:
+            if vehicleId not in violationList:
+                self.illegalLoadingUnloadingList[vehicleId] = {
+                    "cameraId" : self.cameraId,
+                    "vehicleName" : allVehicles.get(vehicleId).get("name"),
+                    "violationStatus" : 0,
+                    "vehicleCenter" : allVehicles.get(vehicleId).get("vehicleCenter")
+                }
+                continue
+
+            vehicleMovement = vehicleMovements.get(vehicleId).get("movement")
+            violationStatus = self.illegalLoadingUnloadingList.get(vehicleId).get("violationStatus")
+
+            if medianTrafficMovement is None:
+                pass
+
+            elif vehicleMovement < 100 and medianTrafficMovement >= 100:
+
+                match violationStatus:
+                    case 0:
+                        violationStatus = 1
+                    case 1:
+                        violationStatus = 2
+                    case 2:
+                        violationStatus = 3
+                    case 3:
+                        violationStatus =3
+            else:
+                violationStatus = 0
+
+            self.illegalLoadingUnloadingList[vehicleId] = {
+                "cameraId" : self.cameraId,
+                "vehicleName" : allVehicles.get(vehicleId).get("name"),
+                "violationStatus" : violationStatus,
+                "vehicleCenter" : allVehicles.get(vehicleId).get("vehicleCenter")
+            }
+
+    def getTrafficMovement(self, allVehicles, violationList):
+        trafficMovement = []
+        vehicleMovements = {}
+        for vehicleId in allVehicles:
+            if vehicleId not in violationList:
+                continue
+
+            currentLoc = allVehicles.get(vehicleId).get("vehicleCenter")
+            lastLoc = violationList.get(vehicleId).get("vehicleCenter")
+
+            vector = ((currentLoc[0] - lastLoc[0]), (currentLoc[1] - lastLoc[1]))
+            movement = math.hypot(vector[0], vector[1])
+            trafficMovement.append(movement)
+            vehicleMovements[vehicleId] = {
+                "movement" : movement 
+            }
+
+        medianTrafficMovement = statistics.median(trafficMovement) if len(vehicleMovements) > 4 else None
+        return medianTrafficMovement, vehicleMovements
+    
     def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation):
         crossProductReference = "counterCrossProduct"
 
@@ -129,6 +209,7 @@ class ComputerVisionComponent:
             startTime = None
             endTime = None
             speed = None
+            movement = None
 
             # VEHICLE CHARACTERISTICS
             vehicleClass = int(box.cls[0])
@@ -151,7 +232,6 @@ class ComputerVisionComponent:
             if len(allVehicles) > 0:
                 counterCrossProduct, vehicleCount = self.VehicleCounterPosition(allVehicles, crossProduct, crossProductReference, currentVehicleId, vehicleCount, crossValidation)
     
-
             allVehicles[currentVehicleId] = {
                 "name" : vehicleName,
                 "crossProduct" : crossProduct,
@@ -162,9 +242,8 @@ class ComputerVisionComponent:
                 "startTime" : startTime,
                 "endTime" : endTime,
                 "lastFrameCount" : self.frameCount,
-                "vehicleCenter" : vehicleCenter
+                "vehicleCenter" : vehicleCenter,
             }
-            
         return frame, allVehicles, vehicleCount
             
     def calculateDensity(self, vehicleFlow, averageSpeed):
@@ -221,13 +300,15 @@ class ComputerVisionComponent:
             "vehicleFlow" : newInterval.get("vehicleFlow"),
             "density": newInterval.get("density"),
             "clock" : newInterval.get("clock"),
-            "violationList" : newInterval.get("violationList")        
+            "illegalParkingList" : newInterval.get("illegalParkingList"),
+            "illegalLoadingUnloadingList" : newInterval.get("illegalLoadingUnloadingList")        
         }
 
     def saveInterval(self):
 
         allVehicles = self.allVehicles
-        violationList = self.violationList
+        illegalParkingList = self.illegalParkingList
+        illegalLoadingUnloadingList = self.illegalLoadingUnloadingList
 
         vehicleFlow = self.calculateFlow()
         speedList, averageSpeed = self.calculateAverageSpeed()
@@ -285,7 +366,8 @@ class ComputerVisionComponent:
                 "vehicleFlow" : vehicleFlow,
                 "density":density,
                 "clock" : clock,
-                "violationList" : violationList
+                "illegalParkingList" : illegalParkingList,
+                "illegalLoadingUnloadingList" : illegalLoadingUnloadingList
             }
 
         self.newInterval()
@@ -320,11 +402,10 @@ class ComputerVisionComponent:
         self.allVehicles = {}
         self.intervalStart = datetime.now()
 
-    def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation):
+    def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation, violationDetectionArea):
         self.frameCount += 1
         self.frame = frame
         self.frameTime = time.perf_counter()
-        # print("This are the vehicles detected: ", self.allVehicles)
         if self.frameCount % 1 == 0:
 
             frame = cv2.resize(frame,(newWidth, newHeight))

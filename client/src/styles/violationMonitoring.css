@@ -24,15 +24,17 @@
     border-top: 1px solid rgb(200, 200, 200);
     border-bottom: 1px solid rgb(200, 200, 200);
 
-    padding-right:8vh;
+    padding-right:0.5vh;
     padding-left: 1vh;
     padding-top: 1vh;
     padding-bottom: 1vh;
-    display: flex;
+    display: grid;
+    grid-template-columns: 10px 100px 150px 250px;
     justify-content: space-between;
     text-align: start;
     align-items: center;
-    width: 100%
+    width: 100%;
+
 }
 
 .listItemContainer:hover{
@@ -41,4 +43,29 @@
 
 .vmh2 {
     border-bottom: 1px solid rgb(230, 230, 230);
+}
+
+.violationBox {
+    scrollbar-color: auto;
+    scrollbar-width: auto;
+}
+
+.violationBox::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 15px;     
+}
+
+.violationBox::-webkit-scrollbar-thumb {
+    background: rgba(200, 200, 200, 0.4);
+    border-radius: 15px;
+    opacity: 0;   
+}
+
+.violationBox::-webkit-scrollbar-thumb:hover {
+    background: rgba(180,180,180, 0.7)
+}
+
+.violationBox::-webkit-scrollbar-track {
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0)
 }

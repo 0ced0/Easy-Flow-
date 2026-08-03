@@ -4,6 +4,7 @@ from CV import ComputerVisionComponent;
 import cv2
 import threading 
 import time
+import numpy as np
 
 # VIDEO VARIABLES
 base_dir = Path(__file__).resolve().parent
@@ -19,7 +20,7 @@ previousFrame = None
 stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
 stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
 stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
-stocVideoPath = Path(base_dir/"videoData/sambat_to_bubukal.mp4")
+stocVideoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
 
 # DEBUG ERROR LIST
 # 
@@ -94,8 +95,8 @@ class streamControl:
             
     def violationMonitoringLoop(self):
         while self.running:
-            self.CV.violationDetection()
-            time.sleep(60)
+            self.CV.illegalParkingDetection()
+            time.sleep(30)
 
     def cvLoop(self):
         
@@ -112,9 +113,9 @@ class streamControl:
             continue
         
         # print("cv loop running!")
-        newWidth, newHeight, countingLine, startLine, endLine = self.lineFunction(frame)
+        newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea = self.lineFunction(frame)
 
-        response = self.CV.inference(frame, newWidth, newHeight, countingLine, startLine, endLine, self.crossValidation)
+        response = self.CV.inference(frame, newWidth, newHeight, countingLine, startLine, endLine, self.crossValidation, violationDetectionArea)
     
         
         time.sleep(0.01)
@@ -234,7 +235,17 @@ def stolLines(frame):
 
     endLine = (elA, elB)
 
-    return (newWidth, newHeight, countingLine, startLine, endLine)
+    polygonLines = np.array([
+        [int(newWidth * 0.53), int(newHeight * 0.25)], 
+        [int(newWidth * 0), int(newHeight * 0.6)], 
+        [int(newWidth * 0), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 0.5)], 
+        [int(newWidth * 0.75), int(newHeight * 0.28)]])
+
+    violationDetectionArea = polygonLines
+
+    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
 
 # SAMBAT TO PATIMBAO LINES
 def stopLines(frame):
@@ -280,7 +291,17 @@ def stopLines(frame):
 
     endLine = (elA, elB)
 
-    return (newWidth, newHeight, countingLine, startLine, endLine)       
+    polygonLines = np.array([
+        [int(newWidth * 0.53), int(newHeight * 0.25)], 
+        [int(newWidth * 0), int(newHeight * 0.6)], 
+        [int(newWidth * 0), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 0.5)], 
+        [int(newWidth * 0.75), int(newHeight * 0.28)]])
+    
+    violationDetectionArea = polygonLines
+
+    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)       
 
 # SAMBAT TO SUNSTAR LINES
 def stosLines(frame):
@@ -325,7 +346,16 @@ def stosLines(frame):
 
     endLine = (elA, elB)
 
-    return (newWidth, newHeight, countingLine, startLine, endLine)
+    polygonLines = np.array([
+        [int(newWidth * 0.3), int(newHeight * 0.2)], 
+        [int(newWidth * 0.001), int(newHeight * 0.5)], 
+        [int(newWidth * 0), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 0.7)], 
+        [int(newWidth * 0.53), int(newHeight * 0.18)]])
+
+    violationDetectionArea = polygonLines
+    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
 
 # SAMBAT TO BUBUKAL
 def stocLines(frame):
@@ -370,7 +400,17 @@ def stocLines(frame):
 
     endLine = (elA, elB)
 
-    return (newWidth, newHeight, countingLine, startLine, endLine)
+    polygonLines = np.array([
+        [int(newWidth * 0.53), int(newHeight * 0.25)], 
+        [int(newWidth * 0), int(newHeight * 0.6)], 
+        [int(newWidth * 0), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 1)],
+        [int(newWidth * 1), int(newHeight * 0.5)], 
+        [int(newWidth * 0.75), int(newHeight * 0.28)]])
+
+    violationDetectionArea = polygonLines
+
+    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
 
 stolStream = streamControl(stolVideoPath, stolLines, 1, 1)
 stopStream = streamControl(stopVideoPath, stopLines, 1, 2)
