@@ -54,13 +54,15 @@ class ComputerVisionComponent:
         self.frame = None
         self.chartData = []
         self.trafficMovement = []
-        self.model = YOLO(modelPath)    
+        self.model = YOLO(modelPath)   
+        # self.forecastingModel = AGCRN 
         self.start = time.perf_counter() 
         self.intervalLock = threading.Lock()
         self.allVehicles = {}
         self.nextIntervalData = {}
         self.illegalParkingList = {}
         self.illegalLoadingUnloadingList = {}
+
 
     def calculateFlow(self):
         vehicleCount = self.vehicleCount

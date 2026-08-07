@@ -1,19 +1,21 @@
 import mysql.connector
 from mysql.connector import Error
 
+DB_CONFIG = {
+    "host" : "localhost",
+    "user" : "root",
+    "password" : "",
+    "database" : "easyflow",
+    }
+
 def saveTrafficInterval(data: dict) -> bool:
     db = None
     cursor = None
 
-    db = mysql.connector.connect(
-    host = "localhost",
-    user = "root",
-    password = "",
-    database = "easyflow",
-    )
 
 
     try:
+        db = mysql.connector.connect(**DB_CONFIG)
         cursor = db.cursor()
 
         query = """
@@ -44,7 +46,6 @@ def saveTrafficInterval(data: dict) -> bool:
         cursor.execute(query, values)
         db.commit()
 
-        # print(f'Saved interval for {data["cameraId"]}')
         return True
 
     except Error as error:
@@ -61,3 +62,67 @@ def saveTrafficInterval(data: dict) -> bool:
 
         if db is not None and db.is_connected():
             db.close()
+
+
+
+def getForecastIntervals(lag: int = 12):
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                grouped.time_step,
+                traffic.camera_id,
+                traffic.traffic_flow,
+                traffic.spatial_density
+            FROM traffic_interval AS traffic
+
+            INNER JOIN (
+                SELECT
+                    FROM_UNIXTIME(
+                        FLOOR(
+                            UNIX_TIMESTAMP(interval_start) / 30
+                        ) * 30
+                    ) AS time_step
+                FROM traffic_interval
+                GROUP BY time_step
+                HAVING COUNT(DISTINCT camera_id) = 4
+                ORDER BY time_step DESC
+                LIMIT %s
+            ) AS grouped
+                ON FROM_UNIXTIME(
+                    FLOOR(
+                        UNIX_TIMESTAMP(traffic.interval_start) / 30
+                    ) * 30
+                ) = grouped.time_step
+
+            WHERE traffic.camera_id IN (1, 2, 3, 4)
+
+            ORDER BY
+                grouped.time_step ASC,
+                traffic.camera_id ASC
+        """
+
+        cursor.execute(query, (lag,))
+        rows = cursor.fetchall()
+        return rows
+
+    except Error as error:
+        print(f"Database retrieval error: {error}")
+        return []
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if db is not None and db.is_connected():
+            db.close()
+
+
+
+getForecastIntervals()

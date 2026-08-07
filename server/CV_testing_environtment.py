@@ -25,7 +25,7 @@ capLock = threading.Lock()
 
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
-videoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
+videoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
 cap = cv2.VideoCapture(videoPath)
 
 

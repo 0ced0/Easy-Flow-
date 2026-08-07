@@ -5,6 +5,7 @@ import cv2
 import threading 
 import time
 import numpy as np
+import os
 
 # VIDEO VARIABLES
 base_dir = Path(__file__).resolve().parent
@@ -121,6 +122,7 @@ class streamControl:
         time.sleep(0.01)
 
     def saveIntervalLoop(self):
+
         while self.running:
             self.CV.saveInterval()
             time.sleep(30)

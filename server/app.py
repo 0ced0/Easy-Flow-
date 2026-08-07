@@ -22,7 +22,7 @@ app.register_blueprint(stream)
 
 if __name__=="__main__":
     startBackend()
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
 
     
     

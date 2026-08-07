@@ -140,13 +140,13 @@ export default function MainDashboard() {
                 setStocIllegalParkingList(stocData.illegalParkingList)
                 setStosIllegalParkingList(stosData.illegalParkingList)
 
-                setStolIllegalLoadingUnloading({1 : 
-                    {"cameraId" : 1, 
-                    "violationType" : 1,
-                    "motion" : false, 
-                    "vehicle" : "Car", 
-                    "vehicleCenter" : (100,100), 
-                    "violationStatus" : 2}})
+                // setStolIllegalLoadingUnloading({1 : 
+                //     {"cameraId" : 1, 
+                //     "violationType" : 1,
+                //     "motion" : false, 
+                //     "vehicle" : "Car", 
+                //     "vehicleCenter" : (100,100), 
+                //     "violationStatus" : 2}})
 
                 setDensityData([
                     {"loc" : "LSPU", "den" : stolData.density},
