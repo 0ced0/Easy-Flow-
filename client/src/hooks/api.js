@@ -73,3 +73,40 @@ export const stosUpdateFrontend = async () => {
         console.error(error)
     }
 }
+
+
+
+// TRAFFIC FORECAST API
+export const getTrafficForecast = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/get_traffic_forecast')
+    }
+    catch(error){
+        console.error(error)
+    }
+}
+
+
+
+
+// DATA REQUEST HANDLER API
+export const getAllRows = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/get_data_table')
+    }catch(error){  
+        console.error(error)
+    }
+}
+
+
+
+
+
+//TRAFFIC LIGHT DATA API
+export const getTrafficLightData = async () => {
+    try{
+        return await fetch('http://127.0.0.1:5000/get_intersection_timers')
+    }catch(error){
+        console.error(error)
+    }
+}

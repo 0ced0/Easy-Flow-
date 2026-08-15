@@ -1,0 +1,8 @@
+.videoStreamButton:hover {
+    background-color: rgba(0,0,0,0.25);
+}
+
+.videoStreamButton {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}

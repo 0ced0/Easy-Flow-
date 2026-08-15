@@ -1,11 +1,15 @@
 from flask import Blueprint, Response
 from pathlib import Path;
-from CV import ComputerVisionComponent;
 import cv2
 import threading 
 import time
 import numpy as np
 import os
+
+from CV import ComputerVisionComponent;
+from trafficForecast import forecastingComponent;
+from trafficLightControl import TLC;
+
 
 # VIDEO VARIABLES
 base_dir = Path(__file__).resolve().parent
@@ -37,11 +41,14 @@ stocVideoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
 
 class streamControl:
     def __init__(self, videoPath, lineFunction, crossValidation, cameraId):
+
+        # SYSTEM COMPONENTS
+        self.CV = ComputerVisionComponent(cameraId)
+
         # VIDEO VARIABLES
         self.videoPath = videoPath
         self.cap = cv2.VideoCapture(videoPath)
         self.videoPath = videoPath
-        self.CV = ComputerVisionComponent(cameraId)
         self.frame = None
         self.frameCount = 0
         self.previousFrame = None
@@ -191,7 +198,42 @@ class streamControl:
     def updateFrontend(self):
         data = self.CV.returnIntervalData()
         return data
-    
+
+class trafficForecast:
+
+    def __init__(self):
+        self.FCC = forecastingComponent()
+        self.forecast = None
+        self.running = False
+        self.trafficForecastThread = None
+
+    def trafficForecastLoop(self):
+
+        while self.running:
+            self.forecast = self.FCC.produceForecast()
+            time.sleep(30)
+
+    def startTrafficForecasting(self):
+
+        if self.running:
+            return
+
+        self.running = True
+
+        self.trafficForecastThread = threading.Thread(
+            target = self.trafficForecastLoop,
+            daemon = True
+        )
+
+        self.trafficForecastThread.start()
+
+    def getTrafficForecast(self):
+        return {
+            "message" : "success",
+            "trafficForecast" : self.forecast,
+        }
+
+
 
 # SAMBAT TO BUBUKAL LINES
 def stolLines(frame):
@@ -414,11 +456,13 @@ def stocLines(frame):
 
     return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
 
+
+fcc = trafficForecast()
 stolStream = streamControl(stolVideoPath, stolLines, 1, 1)
 stopStream = streamControl(stopVideoPath, stopLines, 1, 2)
 stosStream = streamControl(stosVideoPath, stosLines, 1, 3)
 stocStream = streamControl(stocVideoPath, stocLines, 1, 4)
-
+    
 
 # SAMBAT TO LSPU APIS
 @stream.route('/stol_stream_video')
@@ -427,11 +471,9 @@ def stolDisplay():
         stolStream.mjpegGenerator(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
-
 @stream.route("/stol_get_stat_data")
 def stolStatData():
-    return stolStream.getStats()
-    
+    return stolStream.getStats() 
 @stream.route('/stol_update_frontend')
 def stolUpdate():
     return stolStream.updateFrontend()
@@ -443,11 +485,9 @@ def stopDisplay():
         stopStream.mjpegGenerator(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
-
 @stream.route("/stop_get_stat_data")
 def getStopStatData():
     return stopStream.getStats()
-
 @stream.route('/stop_update_frontend')
 def stopUpdate():
     return stopStream.updateFrontend()
@@ -462,11 +502,9 @@ def stosDisplay():
         stosStream.mjpegGenerator(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
-
 @stream.route("/stos_get_stat_data")
 def getStosStatData():
     return stosStream.getStats()
-
 @stream.route('/stos_update_frontend')
 def stosUpdate():
     return stosStream.updateFrontend()
@@ -482,18 +520,19 @@ def stocDisplay():
         stocStream.mjpegGenerator(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
-
 @stream.route("/stoc_get_stat_data")
 def getStocStatData():
     return stocStream.getStats()
-
 @stream.route('/stoc_update_frontend')
 def stocUpdate():
     return stocStream.updateFrontend()
 
 
-
-
+# TRAFFIC FORECAST API
+@stream.route('/get_traffic_forecast')
+def getTrafficForecast():
+    response = fcc.getTrafficForecast()
+    return response
 
 
 # SYSTEM START TRIGGER
@@ -502,6 +541,8 @@ def startBackend():
     stolStream.startCV()
     stopStream.startCV()
     stocStream.startCV()
+    fcc.startTrafficForecasting()
+    TLC.startTrafficLightControl()
     print("SYSTEM START!")
 
 

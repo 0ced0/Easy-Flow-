@@ -4,6 +4,8 @@ from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
 import logging
 from streamControl import stream, startBackend;
+from frontendRequestHandler import dataRequest;
+from trafficLightControl import intersectionTimers;
 
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
@@ -16,7 +18,8 @@ CORS(app,
      })
 
 app.register_blueprint(stream)
-
+app.register_blueprint(dataRequest)
+app.register_blueprint(intersectionTimers)
 
 # print(app.url_map)
 

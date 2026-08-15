@@ -4,10 +4,22 @@ import IntersectionModel from '../components/intersectionModel.jsx'
 import DensityChart from '../components/densityChart.jsx'
 import TrafficLightTimers from '../components/trafficLightTimers.jsx'
 import ViolationMonitoring from '../components/violationMonitoring.jsx'
+import DataTable from '../components/dataTable.jsx'
+import TrafficLightControls from '../components/trafficLightControls.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
 import { useEffect, useState } from 'react'
-import {getStolStatData, getStopStatData, getStocStatData, getStosStatData, stolUpdateFrontend, stopUpdateFrontend, stocUpdateFrontend, stosUpdateFrontend} from '../hooks/api'
+import {getStolStatData, 
+    getStopStatData, 
+    getStocStatData, 
+    getStosStatData, 
+    stolUpdateFrontend, 
+    stopUpdateFrontend, 
+    stocUpdateFrontend, 
+    stosUpdateFrontend,
+    getTrafficForecast,
+    getTrafficLightData,
+} from '../hooks/api'
 import { BarChart } from 'recharts'
 
 
@@ -40,14 +52,18 @@ export default function MainDashboard() {
                     {"loc" : "SUNSTAR",  "den" : 0},
                 ])
 
+    const [trafficForecast, setTrafficForecast] = useState(0)
+    const [trafficLightData, setTrafficLightData] = useState(0)
+    const [showDataTable, setShowDataTable] = useState(false)
+    const [showTrafficLightControls, setShowTrafficLightControls] = useState(false)
 
     useEffect(() => {
         let isRunning = true
         
-        const chartData = async () => {
+        const shortPoll = async () => {
             if (!isRunning) return 
 
-            try{
+            try{VideoStream
                 const stopStatResponse = await getStopStatData()
                 const stopStatJson = await stopStatResponse.json()
 
@@ -60,18 +76,21 @@ export default function MainDashboard() {
                 const stosStatResponse =  await getStosStatData()
                 const stosStatJson = await stosStatResponse.json()
 
+                const tltResponse = await getTrafficLightData()
+                const tltData = await tltResponse.json()
+
                 setStopVehicleNumbers(stopStatJson.vehicleCount)
                 setStolVehicleNumbers(stolStatJson.vehicleCount)
                 setStocVehicleNumbers(stocStatJson.vehicleCount)
                 setStosVehicleNumbers(stosStatJson.vehicleCount)
-                // console.log(stolStatJson)
 
+                setTrafficLightData([tltData.trafficLightData, tltData.allowedApproach])
             }catch(error){
                 console.error(error)
             }
 
             if (isRunning){
-                setTimeout(chartData, 80)
+                setTimeout(shortPoll, 80)
             }
         }
 
@@ -93,10 +112,12 @@ export default function MainDashboard() {
                 const stosResponse = await stosUpdateFrontend()
                 const stosData = await stosResponse.json()
 
-                console.log("LSPU",stolData)
-                console.log("PATIMBAO", stopData)
-                console.log("COMPLEX", stocData)
-                console.log("SUNSTAR", stosData)
+                const forecastResponse = await getTrafficForecast()
+                const forecastData = await forecastResponse.json()
+                // console.log("LSPU",stolData)
+                // console.log("PATIMBAO", stopData)
+                // console.log("COMPLEX", stocData)
+                // console.log("SUNSTAR", stosData)
 
                 setStolAverageVehicleSpeed(previous => {
                     if (stolData.averageVehicleSpeed){
@@ -149,10 +170,10 @@ export default function MainDashboard() {
                 //     "violationStatus" : 2}})
 
                 setDensityData([
-                    {"loc" : "LSPU", "den" : stolData.density},
-                    {"loc" : "PATIMBAO", "den" : stopData.density},
-                    {"loc" : "COMPLEX", "den" : stocData.density},
-                    {"loc" : "SUNSTAR",  "den" : stosData.density},
+                    {"loc" : "LSPU", "density" : stolData.density, "forecast" : Number(forecastData.trafficForecast[0][0][0])},
+                    {"loc" : "PATIMBAO", "density" : stopData.density, "forecast" : Number(forecastData.trafficForecast[0][0][1])},
+                    {"loc" : "SUNSTAR",  "density" : stosData.density, "forecast" : Number(forecastData.trafficForecast[0][0][2])},
+                    {"loc" : "COMPLEX", "density" : stocData.density, "forecast" : Number(forecastData.trafficForecast[0][0][3])},
                 ])
 
             }catch(error){
@@ -164,11 +185,13 @@ export default function MainDashboard() {
             }
         }
 
-        chartData()
+        // const function 
+
+        shortPoll()
         updateChartData()
 
         return () => {
-            clearTimeout(chartData)
+            clearTimeout(shortPoll)
             clearTimeout(updateChartData)
             // URL.revokeObjectURL(frame)
             isRunning = false
@@ -176,11 +199,17 @@ export default function MainDashboard() {
 
     }, [])
 
-
     return (
-        <div className="flex space-x-1 m-1 h-[98vh]">
-            <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-5 h-[97.5vh] rounded-[15px]">
-                <VideoStream/>
+        <div className="flex relative space-x-1 m-1 h-[98vh]">
+
+            {showDataTable && (
+                <DataTable setShowDataTable={setShowDataTable}/>
+            )}
+            {showTrafficLightControls && (
+                <TrafficLightControls setShowTrafficLightControls={setShowTrafficLightControls}/>
+            )}
+            <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-2 max-h-[97.5vh] rounded-[15px]">
+                <VideoStream setShowDataTable={setShowDataTable} setShowTrafficLightControls={setShowTrafficLightControls}/>
                 <ViolationMonitoring stolIllegalParkingList={stolIllegalParkingList} 
                 stopIllegalParkingList={stopIllegalParkingList} 
                 stocIllegalParkingList={stocIllegalParkingList} 
@@ -194,7 +223,7 @@ export default function MainDashboard() {
 
                 {/* Traffic Light Timers */}
                 <div>
-                    <TrafficLightTimers />
+                    <TrafficLightTimers trafficLightData={trafficLightData}/>
                 </div>
 
                 {/* Stat 1 */}

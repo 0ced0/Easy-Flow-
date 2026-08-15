@@ -8,6 +8,21 @@ import numpy as np
 from database.databaseConnector import getForecastIntervals
 
 
+
+# FORECAST LEGEND
+# output[0][0][0][0]
+# [0] = BATCH (ALWAYS 0)
+# [0,1,2,3,4,5] = HORIZON/INTERVAL (30s)
+# [0,1,2,3] = CAMERA
+# [0] = FEATURE/DENSITY
+
+
+# TRAFFIC LIGHT RECCOMENDATIONS BASIS
+# current flow + current density + predicted 
+# density → demand/congestion score → bounded green-time recommendation.
+
+
+
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 
@@ -114,8 +129,12 @@ device = torch.device(
 )
 
 checkpoint_path = Path(
-    "models/training/predictiveModel/model/"
-    "experiments/EASYFLOW/trainingBatch8/best_model.pth"
+    predictiveModelDir
+    /"model"
+    /"experiments"
+    /"EASYFLOW"
+    /"trainingBatch8"
+    /"best_model.pth"
 )
 
 state_dict = torch.load(
@@ -125,14 +144,13 @@ state_dict = torch.load(
 )
 
 
-class foreCastingComponent:
+class forecastingComponent:
 
     def __init__(self):
         self.nodeOrder = [1,2,3,4]
         self.lag = 12
         self.scaler = self.buildScaler()
-        self.densityForecast = []
-
+    
     def buildScaler(self):
 
         data, _ = load_st_dataset("EASYFLOW")
@@ -243,15 +261,12 @@ class foreCastingComponent:
                 normalizedOutput
             )
 
-        self.densityForecast(output.detach().cpu().numpy())
+        return output.detach().cpu().tolist()
+
 
 
 model.load_state_dict(state_dict, strict=True)
 model = model.to(device)
 model.eval()
 
-FCC = foreCastingComponent()
 
-predictions = FCC.produceForecast()
-
-print(predictions)

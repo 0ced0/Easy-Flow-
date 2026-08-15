@@ -1,9 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  background-color: #D8E2ED
+  background-color: #D8E2ED;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
-  font-family: "Roboto", sans-serif
+  font-family: "Roboto", sans-serif;
+  margin: 0;
 }

@@ -65,7 +65,7 @@ def saveTrafficInterval(data: dict) -> bool:
 
 
 
-def getForecastIntervals(lag: int = 12):
+def getForecastIntervals(lag: int | None = 12):
     db = None
     cursor = None
 
@@ -74,10 +74,18 @@ def getForecastIntervals(lag: int = 12):
 
         cursor = db.cursor(dictionary=True)
 
-        query = """
+        limit_clause = ""
+        params = ()
+
+        if lag is not None:
+            limit_clause = "LIMIT %s"
+            params = (lag,)
+
+        query = f"""
             SELECT
                 grouped.time_step,
                 traffic.camera_id,
+                traffic.vehicle_count,
                 traffic.traffic_flow,
                 traffic.spatial_density
             FROM traffic_interval AS traffic
@@ -93,7 +101,7 @@ def getForecastIntervals(lag: int = 12):
                 GROUP BY time_step
                 HAVING COUNT(DISTINCT camera_id) = 4
                 ORDER BY time_step DESC
-                LIMIT %s
+                {limit_clause}
             ) AS grouped
                 ON FROM_UNIXTIME(
                     FLOOR(
@@ -108,7 +116,7 @@ def getForecastIntervals(lag: int = 12):
                 traffic.camera_id ASC
         """
 
-        cursor.execute(query, (lag,))
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         return rows
 
@@ -124,5 +132,59 @@ def getForecastIntervals(lag: int = 12):
             db.close()
 
 
+def dbPostGreenLightTimers(timerData):
+    db = None
+    cursor = None
 
-getForecastIntervals()
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor()
+
+        query = """
+            INSERT INTO green_light_timers (
+                approach_id,
+                approach_name,
+                freeflow,
+                slowdown,
+                congested
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                approach_name = VALUES(approach_name),
+                freeflow = VALUES(freeflow),
+                slowdown = VALUES(slowdown),
+                congested = VALUES(congested)
+        """
+
+        values = (
+            timerData["approach_id"],
+            timerData["approach_name"],
+            timerData["freeflow"],
+            timerData["slowdown"],
+            timerData["congested"]
+        )
+
+        cursor.execute(query, values)
+
+        db.commit()
+
+        print("Green light timers saved successfully")
+
+        return True
+
+    except Error as error:
+        print("Error saving green light timers:", error)
+
+        if db:
+            db.rollback()
+
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if db and db.is_connected():
+            db.close()
+
+
