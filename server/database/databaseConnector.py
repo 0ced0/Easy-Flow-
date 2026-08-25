@@ -131,8 +131,59 @@ def getForecastIntervals(lag: int | None = 12):
         if db is not None and db.is_connected():
             db.close()
 
+def dbGetDataTable(cameraId, page, dateFilter):
+    offset = (page - 1) * 10
+    db = None
+    cursor = None
 
-def dbPostGreenLightTimers(timerData):
+    print(dateFilter)
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        if not dateFilter: 
+            query = """
+                SELECT 
+                    camera_id,
+                    vehicle_count,
+                    traffic_flow,
+                    spatial_density,
+                    created_at
+                    FROM traffic_interval
+                    WHERE camera_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                    OFFSET %s
+            """
+            values = [cameraId, offset]
+
+        else:
+            query = """
+                SELECT 
+                    camera_id,
+                    vehicle_count,
+                    traffic_flow,
+                    spatial_density,
+                    created_at
+                FROM traffic_interval 
+                WHERE camera_id = %s   
+                AND created_at >= %s
+                AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) 
+                ORDER BY created_at DESC
+                LIMIT 10
+                OFFSET %s
+
+            """
+            values=[cameraId, dateFilter, dateFilter, offset]
+
+        cursor.execute(query, values)
+        response = cursor.fetchall()
+        return response
+    except Error as error:
+        print(error)
+
+
+def dbPostTimerConfig(timerData):
     db = None
     cursor = None
 
@@ -141,7 +192,7 @@ def dbPostGreenLightTimers(timerData):
         cursor = db.cursor()
 
         query = """
-            INSERT INTO green_light_timers (
+            INSERT INTO traffic_light_config (
                 approach_id,
                 approach_name,
                 freeflow,
@@ -149,6 +200,7 @@ def dbPostGreenLightTimers(timerData):
                 congested
             )
             VALUES (%s, %s, %s, %s, %s)
+
             ON DUPLICATE KEY UPDATE
                 approach_name = VALUES(approach_name),
                 freeflow = VALUES(freeflow),
@@ -156,24 +208,25 @@ def dbPostGreenLightTimers(timerData):
                 congested = VALUES(congested)
         """
 
-        values = (
-            timerData["approach_id"],
-            timerData["approach_name"],
-            timerData["freeflow"],
-            timerData["slowdown"],
-            timerData["congested"]
-        )
+        values = []
 
-        cursor.execute(query, values)
+        for config in timerData:
+            values.append((
+                config["approach_id"],
+                config["approach_name"],
+                config["freeflow"],
+                config["slowdown"],
+                config["congested"]
+            ))
+
+        cursor.executemany(query, values)
 
         db.commit()
-
-        print("Green light timers saved successfully")
 
         return True
 
     except Error as error:
-        print("Error saving green light timers:", error)
+        print("Database error:", error)
 
         if db:
             db.rollback()
@@ -187,4 +240,259 @@ def dbPostGreenLightTimers(timerData):
         if db and db.is_connected():
             db.close()
 
+def dbPostDensityConfig(densityConfigData):
+    db = None
+    cursor = None
 
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            INSERT INTO density_config (
+                approach_id,
+                approach_name,
+                freeflow_max,
+                slowdown_max    
+            )
+            VALUES (%s, %s, %s, %s)
+
+            ON DUPLICATE KEY UPDATE
+                approach_name = VALUES(approach_name),
+                freeflow_max = VALUES(freeflow_max),
+                slowdown_max = VALUES(slowdown_max)
+        """
+
+        values = []
+
+        for config in densityConfigData:
+            values.append((
+                config["approach_id"],
+                config["approach_name"],
+                config["freeflow_max"],
+                config["slowdown_max"]
+            ))
+
+        cursor.executemany(query, values)
+
+        db.commit()
+
+        return True
+    except Error as error:
+        print(error)
+
+        if db:
+            db.rollback()
+
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if db and db.is_connected:
+            db.close()
+
+def dbPostFlowConfiguration(flowConfigData):
+    db = None
+
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            INSERT INTO flow_config(
+                approach_id,
+                approach_name,
+                freeflow_max,
+                slowdown_max
+            )
+            VALUES (%s, %s, %s, %s)
+
+            ON DUPLICATE KEY UPDATE
+                approach_name = Values(approach_name),
+                freeflow_max = Values(freeflow_max),
+                slowdown_max = Values(slowdown_max)
+        """
+        values = []
+
+        for config in flowConfigData:
+            values.append((
+                config["approach_id"],
+                config["approach_name"],
+                config["freeflow_max"],
+                config["slowdown_max"]
+            ))
+
+        cursor.executemany(query, values)
+
+        db.commit()
+        return True
+
+    except Error as error:
+        print(error)
+        return []
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if db and db.is_connected:
+            db.close()
+
+def postViolationData(violationData):
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            INSERT INTO violations(
+                camera_id,
+                vehicle,
+                violation_type,
+                time_stamp,
+                frame
+            )
+            values(%s, %s, %s, %s, %s)
+        """
+        values=[]
+        values.append((
+            violationData["cameraId"],
+            violationData["vehicle"],
+            violationData["violationType"],
+            violationData["timeStamp"],
+            violationData["frame"]
+        ))
+
+        cursor.executemany(query, values)
+
+        db.commit
+        return True
+
+    except Error as error:
+        print(error)   
+
+    finally:
+        if db and db.is_connected:
+            db.close()
+
+        if cursor:
+            cursor.close()
+
+def dbGetGreenLightTimers():
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                approach_id,
+                approach_name,
+                freeflow,
+                slowdown,
+                congested
+            FROM traffic_light_config
+            ORDER BY approach_id
+        """
+
+        cursor.execute(query)
+
+        configs = cursor.fetchall()
+
+        return configs
+
+    except Error as error:
+        print("Error getting traffic light timers:", error)
+        return []
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if db and db.is_connected():
+            db.close()
+
+
+def dbGetDensityConfig():
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                approach_id,
+                approach_name,
+                freeflow_max,
+                slowdown_max
+            FROM density_config
+            ORDER BY approach_id
+        """
+
+        cursor.execute(query)
+
+        configs = cursor.fetchall()
+
+        return configs
+    except Error as error:
+        print(error)
+        return []
+
+def dbGetFlowConfiguration():
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                approach_id,
+                approach_name,
+                freeflow_max,
+                slowdown_max
+            FROM flow_config
+            ORDER BY approach_id
+        """
+
+        cursor.execute(query)
+
+        configs = cursor.fetchall()
+
+        return configs
+    except Error as error:
+        print(error)
+        return []
+
+def dbGetViolationData():
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                camera_id,
+                vehicle,
+                violation_type,
+                time_stamp,
+                frame, 
+                created_at
+        """
+    except Error as error:
+        print(error)

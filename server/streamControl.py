@@ -5,10 +5,12 @@ import threading
 import time
 import numpy as np
 import os
+import atexit
 
 from CV import ComputerVisionComponent;
 from trafficForecast import forecastingComponent;
 from trafficLightControl import TLC;
+from simulation.sumoController import SC;
 
 
 # VIDEO VARIABLES
@@ -20,7 +22,6 @@ previousFrame = None
 # stopVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.82/live"
 # stosVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.92/live"
 # stocVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.77/live"
-
 
 stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
 stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")

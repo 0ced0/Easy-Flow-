@@ -10,6 +10,7 @@ from database import databaseConnector
 from zoneinfo import ZoneInfo
 import math
 import statistics
+import base64
 
 
 # TARGET FEATURES
@@ -63,7 +64,21 @@ class ComputerVisionComponent:
         self.illegalParkingList = {}
         self.illegalLoadingUnloadingList = {}
 
+    def encodeFrame(self, frame):
+        success, buffer = cv2.imencode(
+            ".jpg",
+            frame,
+            [cv2.IMWRITE_JPEG_QUALITY, 60]
+        )
+    
+        if not success:
+            return None
 
+        encodedFrame = base64.b64encode(buffer).decode("utf-8")
+
+        return encodedFrame            
+
+        
     def calculateFlow(self):
         vehicleCount = self.vehicleCount
         timeInterval = 30
@@ -96,43 +111,71 @@ class ComputerVisionComponent:
         medianTrafficMovement, vehicleMovements = self.getTrafficMovement(allVehicles, violationList)
 
         for vehicle in allVehicles:
+
             motion = True
             if vehicle not in violationList:
                 self.illegalParkingList[vehicle] = {
                     "cameraId" : self.cameraId,
-                    "violationType" : 2,
                     "vehicle" : allVehicles.get(vehicle).get("name"),
+                    "violationType" : 2,
                     "motion" : motion,
                     "violationStatus" : 0,
-                    "vehicleCenter" : allVehicles.get(vehicle).get("vehicleCenter")
+                    "vehicleCenter" : allVehicles.get(vehicle).get("vehicleCenter"),
+                    "frame" : None
                 }
                 continue  
 
             vehicleCenter = allVehicles.get(vehicle).get("vehicleCenter")
             distanceMoved = vehicleMovements.get(vehicle).get("movement")
             violationStatus = violationList.get(vehicle).get("violationStatus")
-
+            frame = violationList.get(vehicle).get("frame")
+            vehicleName = allVehicles.get(vehicle).get("name")
             if distanceMoved < 100 and (medianTrafficMovement is None or medianTrafficMovement >= 10) and (vehicleFlow > 200):
-                    
                 motion = False
                 match violationStatus:
                     case 1:
                         violationStatus = 2
+
+                        cx, cy = vehicleCenter
+                        boxStart = (int(cx - 50), int(cy - 50))
+                        boxEnd = (int(cx + 50), int(cy + 50))
+                        frame = self.frame.copy()
+                        frame = cv2.rectangle(
+                            frame,
+                            boxStart,
+                            boxEnd,
+                            (0,0,255),
+                            1
+                        )
+
+                        frame = self.encodeFrame(frame)
+
                     case 0:
                         violationStatus = 1
 
 
             self.illegalParkingList[vehicle] = {
                 "cameraId" : self.cameraId,
-                "violationType" : 2,
-                "vehicle" : allVehicles.get(vehicle).get("name"),
+                "vehicle" : vehicleName,
                 "motion" : motion,
+                "violationType": 2,
                 "violationStatus" : violationStatus,
                 "distanceMoved" : distanceMoved,
                 "vehicleCenter" : vehicleCenter,
-                "timeStamp" : timeStamp
+                "timeStamp" : timeStamp,
+                "frame" : frame
             }
 
+            violationData = {
+                "cameraId" : self.cameraId,
+                "vehicle" : vehicleName,
+                "violationType" : 2,
+                "timeStamp" : timeStamp,
+                "frame" : frame
+            }
+
+            success = databaseConnector.postViolationData(violationData)
+            print(success)
     def illegalLoadingUnloadingDetection(self):
         allVehicles = self.allVehicles
         violationList = self.illegalLoadingUnloadingList
@@ -293,7 +336,7 @@ class ComputerVisionComponent:
             newInterval = self.nextIntervalData
             
         return{
-            "message" : "the fix is working!",
+            "message" : "success",
             "finalCount" : newInterval.get("finalCount"),
             "chartData" : newInterval.get("chartData"),
             "vehicleData" : newInterval.get("vehicleData"),
@@ -406,12 +449,11 @@ class ComputerVisionComponent:
 
     def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation, violationDetectionArea):
         self.frameCount += 1
-        self.frame = frame
         self.frameTime = time.perf_counter()
         if self.frameCount % 1 == 0:
 
             frame = cv2.resize(frame,(newWidth, newHeight))
-
+            self.frame = frame
             results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack, device=0, verbose=False)
             boxes = results[0].boxes
             

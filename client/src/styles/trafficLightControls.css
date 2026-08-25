@@ -17,26 +17,26 @@ h3 {
     color: #4D4D4D;
 }
 
-input {
+.tlcInput {
     border: 1px solid black;
     width: 40%;
     text-align: center;
 }
 
-input::-webkit-inner-spin-button {
+.tlcInput::-webkit-inner-spin-button {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;
 }
 
-input:hover::-webkit-inner-spin-button {
+.tlcInput:hover::-webkit-inner-spin-button {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;
     text-align: center;
 }
 
-input:focus::-webkit-inner-spin-button {
+.tlcInput:focus::-webkit-inner-spin-button {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;

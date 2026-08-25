@@ -90,19 +90,34 @@ export const getTrafficForecast = async () => {
 
 
 // DATA REQUEST HANDLER API
-export const getAllRows = async () => {
+export const getAllRows = async (camera_id, page, dateFilter = null) => {
     try{
-        return await fetch('http://127.0.0.1:5000/get_data_table')
+        let url = `http://127.0.0.1:5000/get_data_table?camera_id=${camera_id}&page=${page}`
+        if (dateFilter !== null){
+            url += `&dateFilter=${dateFilter}`
+        }
+        return await fetch(url)
     }catch(error){  
         console.error(error)
     }
 }
 
 
+// TRAFFIC LIGHT TIMERS CONFIG API
+export const postTrafficTimersConfig = async (timerConfiguration) => {
+    try{
+        return await fetch('http://127.0.0.1:5000/update_traffic_light_config', {
+            method:'POST',
+            headers: {"Content-Type": "application/json"},
+            body:JSON.stringify({configs:timerConfiguration})
+        }
+    )
+    }catch(error){
+        console.error(error)
+    }
+}
 
-
-
-//TRAFFIC LIGHT DATA API
+// GET TRAFFIC LIGHT DATA API
 export const getTrafficLightData = async () => {
     try{
         return await fetch('http://127.0.0.1:5000/get_intersection_timers')
@@ -110,3 +125,53 @@ export const getTrafficLightData = async () => {
         console.error(error)
     }
 }
+
+
+
+// DENSITY CONFIG API
+export const postDensityConfig = async (densityConfiguration) => {
+    try{
+        return await fetch('http://127.0.0.1:5000/update_density_config', {
+            method:'POST',
+            headers: {"Content-Type": "application/json"},
+            body:JSON.stringify({configs:densityConfiguration})
+        })
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+// GET DENSITY THRESHOLDS CONFIG API
+export const getDensityConfig = async () => {
+    try{
+        return await fetch("http://127.0.0.1:5000/get_density_configuration")
+    }catch(error){
+        console.error(error)
+    }
+}
+
+// FLOW THRESHOLD CONFIG API
+export const postFlowConfig = async (flowConfiguration) => {
+    try{
+        return await fetch("http://127.0.0.1:5000/update_flow_config", {
+            method:'POST',
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({configs: flowConfiguration})
+        })
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+// GET FLOW THRESHOLDS API
+export const getFlowConfig = async () => {
+    try{
+        return await fetch("http://127.0.0.1:5000/get_flow_configuration")
+    }catch(error){
+        console.error(error)
+    }
+}
+
+

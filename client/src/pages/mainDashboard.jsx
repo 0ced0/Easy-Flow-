@@ -4,6 +4,7 @@ import IntersectionModel from '../components/intersectionModel.jsx'
 import DensityChart from '../components/densityChart.jsx'
 import TrafficLightTimers from '../components/trafficLightTimers.jsx'
 import ViolationMonitoring from '../components/violationMonitoring.jsx'
+import ViolationPopUp from '../components/violationPopup.jsx'
 import DataTable from '../components/dataTable.jsx'
 import TrafficLightControls from '../components/trafficLightControls.jsx'
 
@@ -19,6 +20,9 @@ import {getStolStatData,
     stosUpdateFrontend,
     getTrafficForecast,
     getTrafficLightData,
+    getDensityConfig,
+    getFlowConfig,
+    getAllRows
 } from '../hooks/api'
 import { BarChart } from 'recharts'
 
@@ -54,8 +58,34 @@ export default function MainDashboard() {
 
     const [trafficForecast, setTrafficForecast] = useState(0)
     const [trafficLightData, setTrafficLightData] = useState(0)
+    const [approachStates, setApproachStates] = useState([])
+    const [currentConfiguration, setCurrentConfiguration] = useState([])
+    const [timerConfiguration, setTimerConfiguration] = useState(0)
+    const [densityConfiguration, setDensityConfiguration] = useState(0)
+    const [flowConfiguration, setFlowConfiguration] = useState(0)
+
     const [showDataTable, setShowDataTable] = useState(false)
     const [showTrafficLightControls, setShowTrafficLightControls] = useState(false)
+    const [showViolationPopUp, setShowViolationPopUp] = useState(false)
+    const [dataTable, setDataTable] = useState([])
+    const [tableId, setTableId] = useState(0)
+    const [page, setPage] = useState(1)
+
+
+    const handleRequestDataTable = async (camera_id) => {
+        const response = await getAllRows(camera_id, page) 
+        const data = await response.json()
+
+        setTableId(camera_id)
+        setShowDataTable(true)
+        setDataTable(data)
+    }
+    
+    useEffect(() => {
+        if(!showDataTable){
+            setPage(1)
+        }
+    }, [showDataTable])
 
     useEffect(() => {
         let isRunning = true
@@ -63,7 +93,7 @@ export default function MainDashboard() {
         const shortPoll = async () => {
             if (!isRunning) return 
 
-            try{VideoStream
+            try{
                 const stopStatResponse = await getStopStatData()
                 const stopStatJson = await stopStatResponse.json()
 
@@ -79,12 +109,23 @@ export default function MainDashboard() {
                 const tltResponse = await getTrafficLightData()
                 const tltData = await tltResponse.json()
 
+                const densityConfigResponse = await getDensityConfig()
+                const densityConfigData = await densityConfigResponse.json()
+
+                const flowConfigurationResponse = await getFlowConfig()
+                const flowConfigurationData = await flowConfigurationResponse.json()
+
                 setStopVehicleNumbers(stopStatJson.vehicleCount)
                 setStolVehicleNumbers(stolStatJson.vehicleCount)
                 setStocVehicleNumbers(stocStatJson.vehicleCount)
                 setStosVehicleNumbers(stosStatJson.vehicleCount)
 
                 setTrafficLightData([tltData.trafficLightData, tltData.allowedApproach])
+                setApproachStates(tltData.state)
+                setCurrentConfiguration(tltData.currentConfiguration)
+                setTimerConfiguration(tltData.currentConfiguration)
+                setDensityConfiguration(densityConfigData)
+                setFlowConfiguration(flowConfigurationData)
             }catch(error){
                 console.error(error)
             }
@@ -184,9 +225,6 @@ export default function MainDashboard() {
                 setTimeout(updateChartData, 30000)
             }
         }
-
-        // const function 
-
         shortPoll()
         updateChartData()
 
@@ -199,17 +237,29 @@ export default function MainDashboard() {
 
     }, [])
 
+    // console.log(currentConfiguration)    
     return (
         <div className="flex relative space-x-1 m-1 h-[98vh]">
-
+            {showViolationPopUp && (
+                <ViolationPopUp setShowViolationPopUp={setShowViolationPopUp} stolIllegalParkingList={stolIllegalParkingList}
+                    stopIllegalParkingList={stopIllegalParkingList} 
+                    stocIllegalParkingList={stocIllegalParkingList} 
+                    stosIllegalParkingList={stosIllegalParkingList}
+                    stolIllegalLoadingUnloading={stolIllegalLoadingUnloading}
+                />
+            )}
             {showDataTable && (
-                <DataTable setShowDataTable={setShowDataTable}/>
+                <DataTable setShowDataTable={setShowDataTable} dataTable={dataTable} tableId={tableId} setDataTable={setDataTable} setPage={setPage} page={page}/>
             )}
             {showTrafficLightControls && (
-                <TrafficLightControls setShowTrafficLightControls={setShowTrafficLightControls}/>
+                <TrafficLightControls 
+                setShowTrafficLightControls={setShowTrafficLightControls} 
+                timerConfiguration={timerConfiguration} 
+                densityConfiguration={densityConfiguration}
+                flowConfiguration={flowConfiguration}/>
             )}
             <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-2 max-h-[97.5vh] rounded-[15px]">
-                <VideoStream setShowDataTable={setShowDataTable} setShowTrafficLightControls={setShowTrafficLightControls}/>
+                <VideoStream handleRequestDataTable={handleRequestDataTable} setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/>
                 <ViolationMonitoring stolIllegalParkingList={stolIllegalParkingList} 
                 stopIllegalParkingList={stopIllegalParkingList} 
                 stocIllegalParkingList={stocIllegalParkingList} 
@@ -227,10 +277,10 @@ export default function MainDashboard() {
                 </div>
 
                 {/* Stat 1 */}
-                <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
 
                 {/* Stat 2 */}
-                <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/>
             </div>
 
 
@@ -243,10 +293,10 @@ export default function MainDashboard() {
                 </div>
 
                 {/* Stat 1 */}
-                <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed} condition={approachStates[2]}/>
 
                 {/* Stat 2 */}
-                <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed}/>
+                <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed} condition={approachStates[3]}/>
             </div>
         </div>
     )

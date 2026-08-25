@@ -2,6 +2,10 @@
 export default function TrafficLightTimers({trafficLightData}) {
 
     try{
+        if (!trafficLightData?.[0] || trafficLightData[0].length < 4){
+            return null
+        }
+
         return (
         <div className="grid grid-cols-3 w-full min-h-0 max-h-[27vh] p-4 h-[28.5vh] text-center bg-white rounded-[15px] shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
 

@@ -2,7 +2,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useState, useEffect } from 'react'
 
 
-export default function StatCard({loc, statData, vehicleNumbers, averageVehicleSpeed}) {
+export default function StatCard({loc, statData, vehicleNumbers, averageVehicleSpeed, condition}) {
 
     return (
         <div className="min-h-[220px] relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 rounded-[15px] w-full">
@@ -14,7 +14,10 @@ export default function StatCard({loc, statData, vehicleNumbers, averageVehicleS
                 <div className="chart">
 
                     <p>{loc}</p>
-                    <h3>Condition</h3>
+                    
+                    <div className="flex justify-between">
+                        <h3>{condition}</h3>
+                    </div>
 
                     <LineChart
                         responsive

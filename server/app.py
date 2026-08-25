@@ -4,7 +4,7 @@ from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
 import logging
 from streamControl import stream, startBackend;
-from frontendRequestHandler import dataRequest;
+from server.dataTableHandler import dataRequest;
 from trafficLightControl import intersectionTimers;
 
 
