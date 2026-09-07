@@ -89,15 +89,15 @@ class trafficLightControls:
             trafficState = None
             if  density <= densityConfiguration[approach]["freeflow_max"]:
                 timerAllocation = freeflowTimers[approach]
-                trafficState = "freeflow"
+                trafficState = "FREE FLOW"
 
             elif density >= densityConfiguration[approach]["freeflow_max"] + 1 and density <= densityConfiguration[approach]["slowdown_max"]:
                 timerAllocation = slowdownTimers[approach]
-                trafficState = "slowdown"
+                trafficState = "SLOWDOWN"
 
             elif density >= densityConfiguration[approach]["slowdown_max"] + 1:
                 timerAllocation = congestedTimers[approach]
-                trafficState = "congested"
+                trafficState = "CONGESTED"
 
             timers[approach] = {
                 "timerAllocation" : timerAllocation,
@@ -309,7 +309,7 @@ TLC = trafficLightControls()
 
 @intersectionTimers.route('/get_intersection_timers')
 def get_intersection_timers():
-    response = TLC.returnTrafficLightData()    
+    response = TLC.returnTrafficLightData()   
     return response
 
 @intersectionTimers.route('/get_density_configuration')

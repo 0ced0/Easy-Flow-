@@ -128,8 +128,8 @@ class ComputerVisionComponent:
             vehicleCenter = allVehicles.get(vehicle).get("vehicleCenter")
             distanceMoved = vehicleMovements.get(vehicle).get("movement")
             violationStatus = violationList.get(vehicle).get("violationStatus")
-            frame = violationList.get(vehicle).get("frame")
             vehicleName = allVehicles.get(vehicle).get("name")
+            frame = violationList.get(vehicle).get("frame")
             if distanceMoved < 100 and (medianTrafficMovement is None or medianTrafficMovement >= 10) and (vehicleFlow > 200):
                 motion = False
                 match violationStatus:
@@ -149,10 +149,18 @@ class ComputerVisionComponent:
                         )
 
                         frame = self.encodeFrame(frame)
+                        violationData = {
+                            "cameraId" : self.cameraId,
+                            "vehicle" : vehicleName,
+                            "violationType" : 2,
+                            "timeStamp" : timeStamp,
+                            "frame" : frame
+                        }
+
+                        databaseConnector.postViolationData(violationData)
 
                     case 0:
                         violationStatus = 1
-
 
             self.illegalParkingList[vehicle] = {
                 "cameraId" : self.cameraId,
@@ -166,16 +174,6 @@ class ComputerVisionComponent:
                 "frame" : frame
             }
 
-            violationData = {
-                "cameraId" : self.cameraId,
-                "vehicle" : vehicleName,
-                "violationType" : 2,
-                "timeStamp" : timeStamp,
-                "frame" : frame
-            }
-
-            success = databaseConnector.postViolationData(violationData)
-            print(success)
     def illegalLoadingUnloadingDetection(self):
         allVehicles = self.allVehicles
         violationList = self.illegalLoadingUnloadingList
@@ -371,7 +369,7 @@ class ComputerVisionComponent:
         clock = self.start - time.perf_counter()
 
         if (density):
-            density = round(density, 2)
+            density = round(density)
             
         with capLock:
             finalCount =  self.vehicleCount

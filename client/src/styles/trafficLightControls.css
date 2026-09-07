@@ -5,8 +5,9 @@
 }
 
 .boxExternalLabels {
-    font-size: 13px;
+    font-size: 1rem;
     justify-content: center;
+    font-weight: 700;
 }
 
 h3 {
@@ -15,12 +16,16 @@ h3 {
 
 .roads {
     color: #4D4D4D;
+    font-size: 0.7rem;
 }
 
 .tlcInput {
-    border: 1px solid black;
-    width: 40%;
+    background: #f7f8fa;
+    border: 1px solid #d5d9df;
+    border-radius: 5px;
+    width: 4rem;
     text-align: center;
+    color: grey;
 }
 
 .tlcInput::-webkit-inner-spin-button {
@@ -40,4 +45,17 @@ h3 {
     appearance: none;
     -webkit-appearance: none;
     margin: 0;
+}
+
+.sideBarOptions {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+
+    border-radius: 15px;
+}
+
+.sideBarOptions:hover {
+    background-color: rgb(201, 200, 200);
 }

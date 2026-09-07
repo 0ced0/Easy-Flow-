@@ -6,6 +6,7 @@ import logging
 from streamControl import stream, startBackend;
 from server.dataTableHandler import dataRequest;
 from trafficLightControl import intersectionTimers;
+from violationData import violationTable
 
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
@@ -20,6 +21,7 @@ CORS(app,
 app.register_blueprint(stream)
 app.register_blueprint(dataRequest)
 app.register_blueprint(intersectionTimers)
+app.register_blueprint(violationTable)
 
 # print(app.url_map)
 

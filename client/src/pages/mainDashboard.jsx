@@ -5,11 +5,15 @@ import DensityChart from '../components/densityChart.jsx'
 import TrafficLightTimers from '../components/trafficLightTimers.jsx'
 import ViolationMonitoring from '../components/violationMonitoring.jsx'
 import ViolationPopUp from '../components/violationPopup.jsx'
-import DataTable from '../components/dataTable.jsx'
-import TrafficLightControls from '../components/trafficLightControls.jsx'
+// import DataTable from '../components/dataTable.jsx'
+import ViolationDataDisplay from '../components/violationDataDisplay.jsx'
+import TrafficMap from '../components/trafficMap.jsx'
+import SummaryCard from '../components/summaryCard.jsx'
+import ApproachCards from '../components/approachCards.jsx'
+import SideBar from '../components/sideBar.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import {getStolStatData, 
     getStopStatData, 
     getStocStatData, 
@@ -22,7 +26,9 @@ import {getStolStatData,
     getTrafficLightData,
     getDensityConfig,
     getFlowConfig,
-    getAllRows
+    getViolationData,
+    getAllRows,
+    getSummaryData
 } from '../hooks/api'
 import { BarChart } from 'recharts'
 
@@ -63,23 +69,18 @@ export default function MainDashboard() {
     const [timerConfiguration, setTimerConfiguration] = useState(0)
     const [densityConfiguration, setDensityConfiguration] = useState(0)
     const [flowConfiguration, setFlowConfiguration] = useState(0)
-
+    const [violationData, setViolationData] = useState([])
+    const [violationDisplay, setViolationDisplay] = useState(null)
+                
     const [showDataTable, setShowDataTable] = useState(false)
     const [showTrafficLightControls, setShowTrafficLightControls] = useState(false)
     const [showViolationPopUp, setShowViolationPopUp] = useState(false)
     const [dataTable, setDataTable] = useState([])
-    const [tableId, setTableId] = useState(0)
+    const [currentSummaryData, setCurrentSummaryData] = useState(0)
     const [page, setPage] = useState(1)
+    const [dateFilter, setDateFilter] = useState(null)
+    const [approachFilter, setApproachFilter] = useState(0)
 
-
-    const handleRequestDataTable = async (camera_id) => {
-        const response = await getAllRows(camera_id, page) 
-        const data = await response.json()
-
-        setTableId(camera_id)
-        setShowDataTable(true)
-        setDataTable(data)
-    }
     
     useEffect(() => {
         if(!showDataTable){
@@ -88,7 +89,26 @@ export default function MainDashboard() {
     }, [showDataTable])
 
     useEffect(() => {
+        const handleSummaryData = async () => {
+            console.log("happened")
+            const summaryResponse = await getSummaryData(dateFilter)
+            const summaryData = await summaryResponse.json()
+            console.log(summaryData)
+            setCurrentSummaryData(summaryData) 
+        }
+
+        handleSummaryData()
+    }, [dateFilter])
+
+    useEffect(() => {
         let isRunning = true
+
+        const initialize = async () => {
+            const violationDataResponse = await getViolationData()
+            const violationData = await violationDataResponse.json()
+
+            setViolationDisplay(violationData[0])
+        }
         
         const shortPoll = async () => {
             if (!isRunning) return 
@@ -115,10 +135,15 @@ export default function MainDashboard() {
                 const flowConfigurationResponse = await getFlowConfig()
                 const flowConfigurationData = await flowConfigurationResponse.json()
 
+                const violationDataResponse = await getViolationData()
+                const violationData = await violationDataResponse.json()
+
                 setStopVehicleNumbers(stopStatJson.vehicleCount)
                 setStolVehicleNumbers(stolStatJson.vehicleCount)
                 setStocVehicleNumbers(stocStatJson.vehicleCount)
                 setStosVehicleNumbers(stosStatJson.vehicleCount)
+                setViolationData(violationData)
+
 
                 setTrafficLightData([tltData.trafficLightData, tltData.allowedApproach])
                 setApproachStates(tltData.state)
@@ -192,23 +217,15 @@ export default function MainDashboard() {
                     }
                 })
 
-                setStolStatData(stolData.chartData)
-                setStopStatData(stopData.chartData)
-                setStocStatData(stocData.chartData)
-                setStosStatData(stosData.chartData)
+                setStolStatData(stolData)
+                setStopStatData(stopData)
+                setStocStatData(stocData)
+                setStosStatData(stosData)
 
                 setStolIllegalParkingList(stolData.illegalParkingList)
                 setStopIllegalParkingList(stopData.illegalParkingList)
                 setStocIllegalParkingList(stocData.illegalParkingList)
                 setStosIllegalParkingList(stosData.illegalParkingList)
-
-                // setStolIllegalLoadingUnloading({1 : 
-                //     {"cameraId" : 1, 
-                //     "violationType" : 1,
-                //     "motion" : false, 
-                //     "vehicle" : "Car", 
-                //     "vehicleCenter" : (100,100), 
-                //     "violationStatus" : 2}})
 
                 setDensityData([
                     {"loc" : "LSPU", "density" : stolData.density, "forecast" : Number(forecastData.trafficForecast[0][0][0])},
@@ -227,6 +244,7 @@ export default function MainDashboard() {
         }
         shortPoll()
         updateChartData()
+        initialize()
 
         return () => {
             clearTimeout(shortPoll)
@@ -236,10 +254,8 @@ export default function MainDashboard() {
         }
 
     }, [])
-
-    // console.log(currentConfiguration)    
     return (
-        <div className="flex relative space-x-1 m-1 h-[98vh]">
+        <div className="flex relative m-1 h-[98vh] space-x-0.5">
             {showViolationPopUp && (
                 <ViolationPopUp setShowViolationPopUp={setShowViolationPopUp} stolIllegalParkingList={stolIllegalParkingList}
                     stopIllegalParkingList={stopIllegalParkingList} 
@@ -248,9 +264,6 @@ export default function MainDashboard() {
                     stolIllegalLoadingUnloading={stolIllegalLoadingUnloading}
                 />
             )}
-            {showDataTable && (
-                <DataTable setShowDataTable={setShowDataTable} dataTable={dataTable} tableId={tableId} setDataTable={setDataTable} setPage={setPage} page={page}/>
-            )}
             {showTrafficLightControls && (
                 <TrafficLightControls 
                 setShowTrafficLightControls={setShowTrafficLightControls} 
@@ -258,46 +271,68 @@ export default function MainDashboard() {
                 densityConfiguration={densityConfiguration}
                 flowConfiguration={flowConfiguration}/>
             )}
-            <div className="flex flex-col justify-between gap-5 w-[40%] px-3 pt-2 max-h-[97.5vh] rounded-[15px]">
-                <VideoStream handleRequestDataTable={handleRequestDataTable} setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/>
-                <ViolationMonitoring stolIllegalParkingList={stolIllegalParkingList} 
-                stopIllegalParkingList={stopIllegalParkingList} 
-                stocIllegalParkingList={stocIllegalParkingList} 
-                stosIllegalParkingList={stosIllegalParkingList}
-                stolIllegalLoadingUnloading={stolIllegalLoadingUnloading}/>
+            {/* GRID 1 */}
+            <SideBar />
+            <div className="w-[18vw] border- flex flex-col justify-between max-h-[97.5vh] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
+                <ViolationMonitoring violationData={violationData} setViolationDisplay={setViolationDisplay} />
             </div>
             
 
             {/* Grid 2 */}
-            <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
+            <div className="flex-4 flex flex-col justify-between p-1 gap-1.5">
 
-                {/* Traffic Light Timers */}
-                <div>
-                    <TrafficLightTimers trafficLightData={trafficLightData}/>
+                {/* MAP */}
+                <div className="relative bg-white text-center h-[80vh]">
+                    <TrafficMap/>
+                    <ApproachCards approachStates={approachStates} trafficLightData={trafficLightData} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
+                    <VideoStream setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/>
                 </div>
 
+                {/* VIOLATION AND LINECHART */}
+                <div className="flex h-[40vh] space-x-2">
+                    <div className="bg-white flex-1 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                        <ViolationDataDisplay violationDisplay={violationDisplay}/>
+                    </div>
+                    <div className="bg-white flex-2 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                        <StatCard approachFilter={approachFilter} setApproachFilter={setApproachFilter} setDateFilter={setDateFilter} dateFilter={dateFilter} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
+                    </div>
+
+                    {/* SUMMARY */}
+                    <div className="flex-1 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                        <SummaryCard currentSummaryData={currentSummaryData} flowConfiguration={flowConfiguration} densityConfiguration={densityConfiguration}/>
+                    </div>
+                </div>
+                {/* Traffic Light Timers */}
+                {/* <div>
+                    <TrafficLightTimers trafficLightData={trafficLightData}/>
+                </div> */}
+
                 {/* Stat 1 */}
-                <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
+                {/* <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/> */}
 
                 {/* Stat 2 */}
-                <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/>
+                {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
             </div>
 
 
             {/* Grid 3 */}
-            <div className="w-[30%] flex flex-col justify-between p-1 gap-3">
+            {/* <div className="w-[30%] flex flex-col justify-between p-1 gap-3"> */}
 
                 {/* Density and Occupancy Chart  */}
-                <div className="gap-2 pt-2.5 bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] ">
+                {/* <div className="mb-auto gap-2 pt-2.5 bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px]">
                     <DensityChart densityData={densityData}/>                    
                 </div>
 
+                <VideoStream handleRequestDataTable={handleRequestDataTable} setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/> */}
+
+
                 {/* Stat 1 */}
-                <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed} condition={approachStates[2]}/>
+                {/* <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed} condition={approachStates[2]}/> */}
 
                 {/* Stat 2 */}
-                <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed} condition={approachStates[3]}/>
-            </div>
+                {/* <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed} condition={approachStates[3]}/> */}
+            {/* </div> */}
         </div>
     )
 }

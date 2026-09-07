@@ -4,11 +4,11 @@ import { RechartsDevtools } from '@recharts/devtools'
 
 export default function DensityChart ({densityData}) {
     return (
-        <div className="flex flex-col justify-center max-h-[30vh]">
-            <p>Density</p>
-            <div className="flex justify-center">
+        <div className="flex flex-col justify-center p-2">
+            {/* <p>Density</p> */}
+            <div className="flex justify-center pt-9">
                 <BarChart
-                    style={{width: "70%", aspectRatio: 1.65}}
+                    style={{width: "90%", aspectRatio: 1.65}}
                     responsive
                     data={densityData}
                     margin={{
