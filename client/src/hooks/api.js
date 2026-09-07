@@ -132,7 +132,7 @@ export const getSummaryData = async (dateFilter=null) => {
 
 export const getDailyData = async (camera_id=0, page, dateFilter=null) => {
     try{
-        console.log(page)
+        // console.log(page)
         return await fetch(`http://127.0.0.1:5000/get_daily_data?camera_id=${camera_id}&page=${page}&dateFilter=${dateFilter}`)
     }catch(error){
         console.error
@@ -142,6 +142,19 @@ export const getMonthlyData = async (camera_id=0, dateFilter=null) => {
     try{
         // console.log(camera_id)
         let url = `http://127.0.0.1:5000/get_monthly_data?camera_id=${camera_id}`
+        if (dateFilter !== null){
+            url += `&dateFilter=${dateFilter}`
+        }
+
+        return await fetch(url)
+    }catch(error){
+        console.error(error)
+    }
+}
+
+export const getWeeklyData = async (camera_id=0, dateFilter=null) => {
+    try{
+        let url = `http://127.0.0.1:5000/get_weekly_data?camera_id=${camera_id}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }

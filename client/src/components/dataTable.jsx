@@ -1,11 +1,8 @@
 import {getAllRows} from "../hooks/api" 
 import {useEffect, useState, useRef} from "react"
 
-export default function DataTable({dataTable, tableId, setDailyData, setPage, page, monthFilter}) {
-    // console.log(monthFilter)
+export default function DataTable({setCamera_id, dataTable, tableId, setDailyData, setPage, page}) {
     try{
-        const approaches = ["Sambat to LSPU", "Sambat to Patimbao", "Sambat to Sunstar", "Sambat to Complex"]
-        
         const [dateFilter, setDateFilter] = useState(null)
 
         const nextPage = page + 1
@@ -43,18 +40,15 @@ export default function DataTable({dataTable, tableId, setDailyData, setPage, pa
                 console.error(error)
             }
         }
-
-        // function handleShowDateFilter() {
-            
-        // }
-        
+         
         // console.log(dataTable)
 
         return(
             <div className="popUpRoot">
                 <div className="popUpBackground"></div>
                 <div className="popUpContainer relative">
-                    <div className="flex gap-5 pb-3 mb-3 border-b px-5 border-[#D9D9D9] h-[7vh]">
+                    <div className="flex gap-5 mb-3 border-b px-5 border-[#D9D9D9] h-[7vh] items-center">
+
                         {/* <h1 className="opacity-[80%]">{approaches[(tableId -1)]}</h1> */}
                         {/* <button onClick={() => {setShowDateDropDown(prev => !prev)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[8px] bg-white flex gap-2 justify-between items-center px-4 py-1 hover:bg-black/10">
                             Date
@@ -68,11 +62,6 @@ export default function DataTable({dataTable, tableId, setDailyData, setPage, pa
                             </input>
                         } */}
                         
-                        {/* <button onClick={() => {setShowDataTable(false)}} className="ml-auto mr-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-8 hover:stroke-red-600">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
-                        </button> */}
                     </div>
                     <div className="pt-4 mb-2 opacity-[50%] grid grid-cols-5 mx-auto place-items-center">
                         <h3>Date</h3>
@@ -95,7 +84,7 @@ export default function DataTable({dataTable, tableId, setDailyData, setPage, pa
                         }) :
                         <h3 className="mt-10 flex justify-center">No Data Available</h3> 
                     }
-                    <div className="absolute top-0 right-10 flex justify-center mt-2 gap-8 items-center">
+                    <div className="absolute top-1 right-10 flex justify-center mt-2 gap-8 items-center">
                         <button onClick={() => {handlePage(0)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-1 hover:bg-black/20 hover:shadow-none">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
