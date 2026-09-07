@@ -5,6 +5,18 @@ import {getTrafficData, getAllRows, getMonthlyData, getDailyData, getWeeklyData}
 import TriSUmmaryCard from '../components/triSummaryCards.jsx'
 import SummaryChart from '../components/summaryChart.jsx'
 
+function getPreviousMonth(month) {
+    const [year, monthNumber] = month.split("-").map(Number)
+    const previousMonth = new Date(year, monthNumber - 2, 1)
+
+    return `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, "0")}`
+}
+
+function getMonthLabel(month) {
+    const [year, monthNumber] = month.split("-").map(Number)
+    return new Intl.DateTimeFormat("en-US", {month: "long"}).format(new Date(year, monthNumber - 1, 1))
+}
+
 export default function DataTablePage() {
     const [showApproachDropDown, setShowApproachDropDown] = useState(false)
     const approaches = ["Sambat to LSPU", 
@@ -17,6 +29,7 @@ export default function DataTablePage() {
     const [dailyData, setDailyData] = useState([])
     const [weeklyData, setWeeklyData] = useState([])
     const [summaryData, setSummaryData] = useState(null)
+    const [previousSummaryData, setPreviousSummaryData] = useState(null)
     const [tableId, setTableId] = useState(0)
     const [page, setPage] = useState(1)
     const [camera_id, setCamera_id] = useState(1)
@@ -31,6 +44,11 @@ export default function DataTablePage() {
             const data = await response.json()
             setTableId(camera_id)
             setSummaryData(data)
+
+            const previousMonth = getPreviousMonth(monthFilter)
+            const previousResponse = await getMonthlyData(camera_id, previousMonth)
+            const previousData = await previousResponse.json()
+            setPreviousSummaryData(previousData)
 
             const weeklyResponse = await getWeeklyData(camera_id, monthFilter)
             const weeklyResponseData = await weeklyResponse.json()
@@ -102,13 +120,13 @@ export default function DataTablePage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 px-2 sm:px-4 py-2 h-auto md:h-[30vh] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                         <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[0]} summaryValue={summaryData.totalVehicleCount}/>
+                            <TriSUmmaryCard dataCategory={dataCategory[0]} summaryValue={summaryData.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                         <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[1]} summaryValue={summaryData.averageVehicleFlow}/>
+                            <TriSUmmaryCard dataCategory={dataCategory[1]} summaryValue={summaryData.averageVehicleFlow} previousValue={previousSummaryData?.averageVehicleFlow} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                         <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[2]} summaryValue={summaryData.averageDensity}/>
+                            <TriSUmmaryCard dataCategory={dataCategory[2]} summaryValue={summaryData.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 py-2 gap-4 h-auto lg:h-[60vh]">
