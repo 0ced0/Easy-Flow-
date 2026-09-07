@@ -52,26 +52,25 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
         }
     }, [currentSummaryData, flowConfiguration, densityConfiguration])
 
-    console.log(currentSummaryData)
     return(
-    <div className="relative h-full z-10">
+    <div className="relative h-auto lg:h-full min-h-64 lg:min-h-0 z-10 overflow-hidden">
         {/* BACKGROUND */}
         <div className="absolute z-50 bg-[#0000FF]/10 inset-0"></div>
-        <div className=" inset-0 absolute z-100 p-2 space-y-1.5">
+        <div className="inset-0 absolute z-100 flex flex-col p-3 lg:p-2 space-y-1.5 min-w-0">
             <div className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                <p className="p-2 font-medium text-[#363636]">Average Traffic Summary</p>
+                <p className="p-3 lg:p-2 font-medium text-sm sm:text-base text-[#363636]">Average Traffic Summary</p>
             </div>
-            <div className="bg-white h-[23.5vh] shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                <div className="flex items-center pt-1 justify-around">
-                    <p className="summaryHeader">Approach</p>
-                    <p className="summaryHeader">Flow</p>
-                    <p className="summaryHeader">Density</p>
-                    <p className="summaryHeader">State</p>
+            <div className="bg-white flex-1 min-h-0 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                <div className="grid grid-cols-4 gap-1 items-center pt-2 text-center">
+                    <p className="summaryHeader text-[0.55rem] sm:text-[0.7rem]">Approach</p>
+                    <p className="summaryHeader text-[0.55rem] sm:text-[0.7rem]">Flow</p>
+                    <p className="summaryHeader text-[0.55rem] sm:text-[0.7rem]">Density</p>
+                    <p className="summaryHeader text-[0.55rem] sm:text-[0.7rem]">State</p>
                 </div>
                 {Object.keys(currentSummaryData).length > 0 ? 
-                    <div className="grid grid-cols-4 h-[90%]">
+                    <div className="grid grid-cols-4 gap-1 h-[90%]">
                         {/* SUMMARY APPROACH */}
-                        <div className="summaryContent pl-5 space-y-2 pt-2">
+                        <div className="summaryContent pl-5 sm:pl-11 md:ml-0 md:pl-2 sm:pl-5 space-y-[4vw] md:space-y-2 pt-2 lg:pb-[0.8rem] text-[0.55rem] sm:text-[0.6rem] leading-tight lg:flex lg:flex-col lg:justify-between lg:space-y-0">
                             <p>Sambat to LSPU</p>
                             <p>Sambat to Patimbao</p>
                             <p>Sambat to Complex</p>
@@ -79,7 +78,7 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
                             </div>
 
                         {/* SUMMARY FLOW */}
-                        <div className="summaryContent space-y-6 pt-2 text-end pr-4">
+                        <div className="summaryContent space-y-6 pt-2 lg:pb-[0.8rem] text-center md:text-end sm:pr-4 text-[0.55rem] sm:text-[0.6rem] lg:flex lg:flex-col lg:justify-between lg:space-y-0">
                             <p>{currentSummaryData.lspuAverageFlow}vh/hr</p>
                             <p>{currentSummaryData.patimbaoAverageFlow}vh/vr</p>
                             <p>{currentSummaryData.complexAverageFlow}vh/vr</p>
@@ -87,7 +86,7 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
                         </div>
 
                         {/* SUMMARY DENSITY */}
-                        <div className="summaryContent space-y-6 pt-2 text-end pr-4">
+                        <div className="summaryContent space-y-6 pt-2 lg:pb-[0.8rem] text-center md:text-end sm:pr-4 text-[0.55rem] sm:text-[0.6rem] lg:flex lg:flex-col lg:justify-between lg:space-y-0">
                             <p>{currentSummaryData.lspuAverageDensity}vh/km</p>
                             <p>{currentSummaryData.patimbaoAverageDensity}vh/km</p>
                             <p>{currentSummaryData.complexAverageDensity}vh/km</p>
@@ -95,7 +94,7 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
                         </div>
                     
                         {/* SUMMARY TRAFFIC STATE */}
-                        <div className="text-[0.6rem] font-bold space-y-6 pt-2 text-end pr-4">
+                        <div className="text-[0.5rem] sm:text-[0.6rem] font-bold space-y-6 pt-2 lg:pb-[0.8rem] text-center md:text-end sm:pr-4 lg:flex lg:flex-col lg:justify-between lg:space-y-0">
                             <p className={`${stateColor[trafficState[0]?.state]}`}>{trafficState[0]?.state}</p>
                             <p className={`${stateColor[trafficState[1]?.state]}`}>{trafficState[1]?.state}</p>
                             <p className={`${stateColor[trafficState[3]?.state]}`}>{trafficState[3]?.state}</p>
