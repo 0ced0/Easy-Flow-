@@ -1,37 +1,117 @@
-h1 {
-    font-size: 1.6rem;
-    bottom: 8px;
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(200, 200, 200, 0.4);
+    opacity: 0;   
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(180,180,180, 0.7)
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0)
+}
+
+
+
+
+
+/* VIOLATION MONITORING STYLES */
+.vmVehicle {
+    font-size: 15px;
+    color: rgb(70, 70, 70);
+    font-weight: 400;
+    /* border: 1px solid black; */
+}
+
+.vmNp {
+    font-size: 16px;
+    color: rgb(70, 70, 70);
+    opacity: 0.8;
+    font-weight: 300;
+    /* border: 1px solid black; */
+}
+
+.vmViolation {
+    font-size: 15px;
+    color: rgb(70, 70, 70);
+    font-weight: 700;
+    /* border: 1px solid black; */
+}
+
+.listItemContainer {
+    border-top: 1px solid rgb(200, 200, 200);
+    border-bottom: 1px solid rgb(200, 200, 200);
+
+    padding-right:0.5vh;
+    padding-left: 1vh;
+    padding-top: 1vh;
+    padding-bottom: 1vh;
     display: flex;
-    align-items: center;
-    }
-
-h2 {
-    font-size: 1.4rem;
-    margin-top: 0.8rem;
-}
-
-h3 {
+    /* grid-template-columns: 10px 100px 150px 250px;  */
+    justify-content: space-between;
     text-align: start;
+    align-items: center;
+    width: 100%;
+
 }
 
-h4 {
-    position: absolute;
-    right: 0;
-    left: 0;
-    bottom:0.5vh;
+.listItemContainer:hover{
+    background-color: rgb(230,230,230);
 }
 
-p {
-    text-align: center;
-    font-weight: 600;
+.vmh2 {
+    border-bottom: 1px solid rgb(230, 230, 230);
+}
+
+.violationBox {
+    scrollbar-color: auto;
+    scrollbar-width: auto;
+}
+
+.violationBox::-webkit-scrollbar {
+    width: 10px;
+}
+
+.violationBox::-webkit-scrollbar-thumb {
+    background: rgba(200, 200, 200, 0.4);
+    opacity: 0;   
+}
+
+.violationBox::-webkit-scrollbar-thumb:hover {
+    background: rgba(180,180,180, 0.7)
+}
+
+.violationBox::-webkit-scrollbar-track {
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0)
+}
+
+
+
+
+/* VIOLATION DATA DISPLAY STYLES */
+.VDDLabel {
     font-size: 0.7rem;
-    padding-bottom: 0px;
-    color: #092376;
+}
+
+
+
+
+/* CHART DISPLAY STYLES */
+.chart {
+    background-color: white;
+    flex: auto;
+    padding-bottom: 35px;
+    box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25)
 }
 
 .counter {
     background-color: white;
-    border-radius: 15px;
     padding-block: 10px;
     padding-inline: 8px;
     height: 100%;
@@ -39,68 +119,60 @@ p {
     box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25)
 }
 
-.chart {
-    background-color: white;
-    border-radius: 15px;
-    flex: auto;
-    padding-top: 5px;
-    padding-left: 10px;
-    padding-bottom: 35px;
-    box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25)
-}
 
-.timer {
-    padding: 8px;
-    background-color: black;
-    border-radius: 10px;
-}
 
-.popUpRoot {
+
+/* MAP STYLES */
+.trafficMapContainer {
+    width: 100%;
+    height: 100%;
+    z-index: 10;
     position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 30;
 }
 
-.popUpBackground {
-    position: fixed;
-    inset: 0;
-    background-color: black;
-    opacity: 0.3;
-    z-index: 40;
+.trafficMap {
+    width: 100%;
+    height: 100%;
 }
 
-.popUpContainer {
-    padding-top: 1.25rem;
-    padding-top: 1.25rem;
-    width: 60vw;
-    height: 90vh;
-    z-index: 50;
+
+
+/* SUMMARY CARD STYLES */
+.summaryHeader {
+    color: #363636;
+    opacity: 70%;
+    font-size: 0.7rem;
+}
+
+.summaryContent {
+    color: #363636;
+    font-size: 0.6rem;
+    font-weight: 700;
+}
+
+
+
+
+
+/* APPROACH CARD STYLES */
+.card {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    padding-right: 0.3rem;
+    padding-left: 0.3rem;
     background-color: white;
-    border-radius: 15px;
-    box-shadow: (0, 1, 4, 1, rgba(0,0,0,0.25));
+    width: 5.5rem;
+    height: 4.5rem;
+    box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25);
+    text-align: start;
+    font-size: 0.5rem;
+    color: #363636;
 }
 
-.popUpContainerVM {
-    padding-top: 1.25rem;
-    padding-top: 1.25rem;
-    width: 90vw;
-    height: 90vh;
-    z-index: 50;
-    background-color: white;
-    border-radius: 15px;
-    box-shadow: (0, 1, 4, 1, rgba(0,0,0,0.25));
-}
 
-.popUpContainerTLC {
-    padding-top: 1.25rem;
-    padding-top: 1.25rem;
-    width: 80vw;
-    height: 90vh;
-    z-index: 50;
-    background-color: white;
-    border-radius: 15px;
-    box-shadow: (0, 1, 4, 1, rgba(0,0,0,0.25));
+/* SIDEBAR STYLES  */
+.sideBarIcons {
+    margin-left: auto;
+    margin-right: auto;
+    padding: 2px;
 }

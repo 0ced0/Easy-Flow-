@@ -29,40 +29,15 @@ export const VideoStream = ({handleRequestDataTable, setShowTrafficLightControls
 
         return (
 
-            <div className="grid max-h-[45vh]">
-                <div className="relative bg-[#0000FF]/20 flex justify-start mb-2 rounded-[8px] shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] w-[100%] p-1">
-                        <button ref={dataDropdownButtonRef} onClick={() => setShowDataDropdown(previous => !previous)} className="videoStreamButton rounded-[8px]">
-                            <div className="px-2 rounded-[8px]">
-                                Data
-                            </div>
-                        </button>
-                        <button onClick={() => setShowTrafficLightControls(previous => !previous)} className="videoStreamButton rounded-[8px]">
-                            <div className="px-2 rounded-[8px]">
-                                Timer Control
-                            </div>
-                        </button>
-                        <button onClick={() => setShowViolationPopUp(previous => !previous)} className="videoStreamButton rounded-[8px]">
-                            <div className="px-5 rounded-[8px]">
-                                Violations
-                            </div>
-                        </button>
-                        {showDataDropdown &&(
-                            <div ref={dataDropdownRef} className="absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-[30vh] left-1 top-12 flex flex-col">
-                                <button onClick={() => {handleSelectApproach(1)}} className="videoStreamButton">Sambat to LSPU</button>
-                                <button onClick={() => {handleSelectApproach(2)}} className="videoStreamButton">Sambat to Patimbao</button>
-                                <button onClick={() => {handleSelectApproach(4)}} className="videoStreamButton">Sambat to Complex</button>
-                                <button onClick={() => {handleSelectApproach(3)}} className="videoStreamButton">Sambat to Sunstar</button>
-                            </div>
-                        )}
-
+            <div className="absolute p-0.5 bg-black/70 top-0 right-0 z-300 grid shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] max-h-[50vh] h-[35vh] max-w-[20vw]">
+            
+                <div className="gap-0 overflow-hidden">
+                    <img src={'http://127.0.0.1:5000/stol_stream_video'} className="h-full w-full" />
                 </div>
-                <div className="grid grid-cols-2 gap-0 overflow-hidden">
-                    <img src={'http://127.0.0.1:5000/stol_stream_video'} className="h-full" />
-                    <img src={'http://127.0.0.1:5000/stos_stream_video'} className="h-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-0 overflow-hidden">
-                    <img src={'http://127.0.0.1:5000/stop_stream_video'} className="h-full" />
-                    <img src={'http://127.0.0.1:5000/stoc_stream_video'} className="h-full" />
+                <div className="grid grid-cols-3 gap-0 overflow-hidden">
+                    <img src={'http://127.0.0.1:5000/stos_stream_video'} className="h-full w-[100%]" />
+                    <img src={'http://127.0.0.1:5000/stop_stream_video'} className="h-full w-[100%]" />
+                    <img src={'http://127.0.0.1:5000/stoc_stream_video'} className="h-full w-[100%]" />
                 </div>
             </div>
         )

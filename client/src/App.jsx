@@ -1,5 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import MainDashboard from './pages/mainDashboard.jsx'
+import TrafficLightControlsPage from './pages/trafficControls.jsx'
+import DataTablePage from './pages/dataTablePage.jsx'
 import './App.css'
 
 function App() {
@@ -7,6 +9,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<MainDashboard />} />
+      <Route path="/traffic_light_controls_page" element={<TrafficLightControlsPage />}/>
+      <Route path="/data_table_page" element={<DataTablePage />}/>
     </Routes>
 
   )

@@ -90,14 +90,64 @@ export const getTrafficForecast = async () => {
 
 
 // DATA REQUEST HANDLER API
-export const getAllRows = async (camera_id, page, dateFilter = null) => {
+export const getTrafficData = async (camera_id, dateFilter=null) => {
     try{
-        let url = `http://127.0.0.1:5000/get_data_table?camera_id=${camera_id}&page=${page}`
+        let url = `http://127.0.0.1:5000/get_hourly_data?camera_id=${camera_id}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }
         return await fetch(url)
     }catch(error){  
+        console.error(error)
+    }
+}
+
+export const getAllRows = async (camera_id=0, page=null, dateFilter=null) => {
+    try{
+        let url = `http://127.0.0.1:5000/get_all_rows?camera_id=${camera_id}&page=${page}`
+        if (dateFilter !== null){
+            url += `&dateFilter=${dateFilter}`
+        }
+
+        return await fetch(url)
+    }catch(error){
+        console.error(error)
+    }
+}
+
+export const getSummaryData = async (dateFilter=null) => {
+    try{
+
+        let url = `http://127.0.0.1:5000/get_summary_data`
+        if (dateFilter !== null){
+            url += `?dateFilter=${dateFilter}`
+        }
+
+        return await fetch(url)
+    }
+    catch(error){
+        console.error(error)
+    }
+}
+
+export const getDailyData = async (camera_id=0, page, dateFilter=null) => {
+    try{
+        console.log(page)
+        return await fetch(`http://127.0.0.1:5000/get_daily_data?camera_id=${camera_id}&page=${page}&dateFilter=${dateFilter}`)
+    }catch(error){
+        console.error
+    }
+}
+export const getMonthlyData = async (camera_id=0, dateFilter=null) => {
+    try{
+        // console.log(camera_id)
+        let url = `http://127.0.0.1:5000/get_monthly_data?camera_id=${camera_id}`
+        if (dateFilter !== null){
+            url += `&dateFilter=${dateFilter}`
+        }
+
+        return await fetch(url)
+    }catch(error){
         console.error(error)
     }
 }
@@ -169,6 +219,16 @@ export const postFlowConfig = async (flowConfiguration) => {
 export const getFlowConfig = async () => {
     try{
         return await fetch("http://127.0.0.1:5000/get_flow_configuration")
+    }catch(error){
+        console.error(error)
+    }
+}
+
+
+// VIOLATION DATA API
+export const getViolationData = async () => {
+    try{
+        return await fetch("http://127.0.0.1:5000/get_violation_data")
     }catch(error){
         console.error(error)
     }
