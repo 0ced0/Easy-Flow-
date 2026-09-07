@@ -46,8 +46,8 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
         return(
             <div className="popUpRoot">
                 <div className="popUpBackground"></div>
-                <div className="popUpContainer relative">
-                    <div className="flex gap-5 mb-3 border-b px-5 border-[#D9D9D9] h-[7vh] items-center">
+                <div className="popUpContainer relative min-w-[40rem] lg:min-w-0">
+                    <div className="flex gap-5 mb-3 border-b px-3 sm:px-5 border-[#D9D9D9] h-14 sm:h-[7vh] items-center">
 
                         {/* <h1 className="opacity-[80%]">{approaches[(tableId -1)]}</h1> */}
                         {/* <button onClick={() => {setShowDateDropDown(prev => !prev)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[8px] bg-white flex gap-2 justify-between items-center px-4 py-1 hover:bg-black/10">
@@ -63,18 +63,17 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
                         } */}
                         
                     </div>
-                    <div className="pt-4 mb-2 opacity-[50%] grid grid-cols-5 mx-auto place-items-center">
+                    <div className="pt-4 mb-2 opacity-[50%] grid grid-cols-4 gap-2 mx-auto place-items-center text-xs sm:text-sm">
                         <h3>Date</h3>
                         <h3>Number of Vehicles</h3>
                         <h3>Vehicle Flow</h3>
                         <h3>Spatial Density</h3>
-                        <h3>State</h3>
                     </div>
 
                     {dataTable.length >= 1 ? 
                         dataTable.map((row, id) => {
                             return(
-                            <div key={id} className="text-[0.8rem] bg-white py-4 grid grid-cols-5 place-items-center">
+                            <div key={id} className="text-xs sm:text-[0.8rem] bg-white py-4 grid grid-cols-4 gap-2 place-items-center">
                                 <h3>{row.date}</h3>
                                 <h3>{row.vehicleCount}</h3>
                                 <h3>{row.averageFlow} veh/hr</h3>
@@ -84,7 +83,7 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
                         }) :
                         <h3 className="mt-10 flex justify-center">No Data Available</h3> 
                     }
-                    <div className="absolute top-1 right-10 flex justify-center mt-2 gap-8 items-center">
+                    <div className="absolute top-1 right-3 sm:right-10 flex justify-center mt-2 gap-3 sm:gap-8 items-center">
                         <button onClick={() => {handlePage(0)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-1 hover:bg-black/20 hover:shadow-none">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />

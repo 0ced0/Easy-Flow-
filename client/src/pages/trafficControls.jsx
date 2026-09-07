@@ -35,7 +35,7 @@ export default function  TrafficLightControlsPage() {
     try{ 
 
         return(
-            <div className="flex relative m-1 h-[98vh] space-x-0.5">
+            <div className="flex flex-col md:flex-row relative m-1 pb-20 md:pb-0 md:h-[90vh]md:space-x-0.5">
                 <SideBar/>
                 <TrafficLightControls timerConfiguration={timerConfiguration} densityConfiguration={densityConfiguration} flowConfiguration={flowConfiguration}/>
             </div>

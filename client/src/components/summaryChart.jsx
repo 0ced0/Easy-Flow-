@@ -3,17 +3,17 @@ import {Tooltip, Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid} from 're
 export default function SummaryChart ({weeklyData}) {
     try{
     return (
-        <div className="h-[50vh] py-3 px-5 space-y-5">
-            <h1 className="text-[1.5rem] text-black/70">
+        <div className="h-full min-h-0 py-3 px-2 sm:px-5 space-y-3 sm:space-y-5">
+            <h1 className="text-lg sm:text-[1.5rem] text-black/70">
                 Weekly Flow and Density Chart
             </h1>
 
             <ComposedChart
+            className="h-[95%] pb-2 md:pb-0 md:h-[90%]"
                 responsive
                 data={weeklyData}
                 style={{
                     width: "100%",
-                    height: "100%"
                 }}
             >
                 <CartesianGrid

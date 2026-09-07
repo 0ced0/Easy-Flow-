@@ -88,27 +88,27 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
 
     // console.log(currentData)
     return (
-        <div className="min-h-[220px] h-full relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
+        <div className="min-h-[24rem] sm:min-h-[220px] h-full relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
 
             {/* Background */}
             <div className="absolute z-10 inset-0 bg-[#0000FF] opacity-[10%]"></div>
 
-            <div className="h-[100%] gap-2 z-20 absolute flex p-1 inset-0">
-                <div className="chart relative">
-                <div className="flex items-center border-b border-[#D9D9D9] font-medium text-start mb-2 px-2 py-0.5">
-                    <button ref={dateButtonRef} onClick={() => {setShowDateDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2">
+            <div className="h-[100%] gap-2 z-20 absolute flex flex-col sm:flex-row p-1 inset-0">
+                <div className="chart relative min-h-64 sm:min-h-0 w-full sm:w-auto min-w-0">
+                <div className="flex flex-wrap items-center border-b border-[#D9D9D9] font-medium text-sm sm:text-base text-start mb-2 px-1 sm:px-2 py-0.5">
+                    <button ref={dateButtonRef} onClick={() => {setShowDateDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2 min-h-11 sm:min-h-0">
                         Date
                     </button>
                     {showDateDropDown &&
                         <input ref={dateRef} onChange={(event) => {handleDateFilter(event)}} type="date" value={dateFilter}
-                            className="absolute z-100 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white top-7 p-2 w-[27%]">
+                            className="absolute z-100 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white top-7 p-2 w-44 sm:w-[27%]">
                         </input>
                     }
-                    <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2">
+                    <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2 min-h-11 sm:min-h-0">
                         Approach
                     </button>
                     {showApproachDropDown &&(
-                        <div ref={approachButtonRef} className="z-100 absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-[30vh] left-16 top-7 flex flex-col">
+                        <div ref={approachButtonRef} className="z-100 absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-[min(18rem,90vw)] left-2 sm:left-16 top-9 sm:top-7 flex flex-col">
                             <button onClick={() => {handleApproachFilter(1)}} className="videoStreamButton">Sambat to LSPU</button>
                             <button onClick={() => {handleApproachFilter(2)}} className="videoStreamButton">Sambat to Patimbao</button>
                             <button onClick={() => {handleApproachFilter(4)}} className="videoStreamButton">Sambat to Complex</button>
@@ -117,7 +117,7 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
                     )}
                 </div>
                 
-                    <p>{currentApproach}</p>
+                    <p className="text-sm sm:text-base font-medium text-black/70">{currentApproach}</p>
                 
                     {currentData ? 
                         <LineChart
@@ -148,16 +148,16 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
 
 
                 {/* Stat Numbers */}
-                <div className="relative flex flex-col justify-between gap-3 w-[6rem]">
+                <div className="relative flex flex-row min-h-24 sm:min-h-0 sm:flex-col justify-between gap-3 sm:gap-2 w-full sm:w-[6rem]">
 
-                    <div className="counter">
-                        <p>Vehicle Count</p>
-                        <h2>{vehicleNumbers}</h2>
+                    <div className="counter h-full min-h-20 sm:min-h-0 flex-1 sm:flex-none text-sm">
+                        <p className="text-xs sm:text-sm">Vehicle Count</p>
+                        <h2 className="text-lg sm:text-xl font-medium">{vehicleNumbers}</h2>
                     </div>
-                    <div className="counter">
-                        <p>Average speed</p>
-                        <h2>{averageVehicleSpeed}</h2>
-                        <h4>km/h</h4>
+                    <div className="counter h-full min-h-20 sm:min-h-0 flex-1 sm:flex-none text-sm">
+                        <p className="text-xs sm:text-sm">Average speed</p>
+                        <h2 className="text-lg sm:text-xl font-medium">{averageVehicleSpeed}</h2>
+                        <h4 className="text-xs sm:text-sm">km/h</h4>
                     </div>
                 </div>
             </div>

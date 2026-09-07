@@ -29,7 +29,7 @@ export const VideoStream = ({handleRequestDataTable, setShowTrafficLightControls
 
         return (
 
-            <div className="absolute p-0.5 bg-black/70 top-0 right-0 z-300 grid shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] max-h-[50vh] h-[35vh] max-w-[20vw]">
+            <div className="hidden md:grid absolute p-0.5 bg-black/70 top-0 right-0 z-300 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] md:h-[35vh] max-h-[50vh] md:w-auto md:max-w-[20vw]">
             
                 <div className="gap-0 overflow-hidden">
                     <img src={'http://127.0.0.1:5000/stol_stream_video'} className="h-full w-full" />

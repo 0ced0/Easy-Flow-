@@ -13,13 +13,13 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
         // console.log("COMPLEX", stocStatData)
         // console.log("SUNSTAR", stosStatData)
         return(
-            <div className="absolute left-80 z-100 w-[50%] h-full">
+            <div className="block absolute inset-0 z-100 w-full h-full lg:inset-auto lg:left-80 lg:w-[50%] lg:h-full">
                  {colors && (
                     <>
                     <div className="relative w-full h-full">
 
                     </div>
-                    <div className="grid grid-cols-2 card absolute top-30 left-45">
+                    <div className="grid grid-cols-2 card absolute top-3 left-3 lg:top-30 lg:left-45">
                         <div>
                             <p className="mb-[0.38rem] font-medium">Sambat to LSPU</p>
                             <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stolStatData.vehicleFlow}vh/hr</p>
@@ -38,7 +38,7 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
                             <p className="pr-1 font-bold">{timers[0]}</p>
                         </div>
                     </div>
-                    <div className="card grid grid-cols-2 absolute top-45 right-45">
+                    <div className="card grid grid-cols-2 absolute top-3 right-3 lg:top-45 lg:right-45">
                         <div>
                             <p className="mb-[0.38rem] font-medium">Sambat to Patimbao</p>
                             <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stopStatData.vehicleFlow}vh/hr</p>
@@ -57,7 +57,7 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
                             <p className="pr-1 font-bold">{timers[1]}</p>
                         </div>
                     </div>
-                    <div className="card grid grid-cols-2 absolute bottom-38 right-55">
+                    <div className="card grid grid-cols-2 absolute bottom-3 right-3 lg:bottom-38 lg:right-55">
                         <div>
                             <p className="mb-[0.38rem] font-medium">Sambat to Complex</p>
                             <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stocStatData.vehicleFlow}vh/hr</p>
@@ -76,7 +76,7 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
                             <p className="pr-1 font-bold">{timers[2]}</p>
                         </div>
                     </div>
-                    <div className="card grid grid-cols-2 absolute bottom-55 left-35">
+                    <div className="card grid grid-cols-2 absolute bottom-3 left-3 lg:bottom-55 lg:left-35">
                         <div>
                             <p className="mb-[0.38rem] font-medium">Sambat to Sunstar</p>
                             <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stosStatData.vehicleFlow}vh/hr</p>

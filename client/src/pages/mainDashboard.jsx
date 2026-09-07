@@ -90,10 +90,8 @@ export default function MainDashboard() {
 
     useEffect(() => {
         const handleSummaryData = async () => {
-            console.log("happened")
             const summaryResponse = await getSummaryData(dateFilter)
             const summaryData = await summaryResponse.json()
-            console.log(summaryData)
             setCurrentSummaryData(summaryData) 
         }
 
@@ -255,7 +253,7 @@ export default function MainDashboard() {
 
     }, [])
     return (
-        <div className="flex relative m-1 h-[98vh] space-x-0.5">
+        <div className="flex flex-col md:flex-row relative m-1 pb-20 md:pb-0 min-h-screen md:h-[98vh] lg:h-[calc(98vh-0.5rem)] md:min-h-0 md:space-x-0.5">
             {showViolationPopUp && (
                 <ViolationPopUp setShowViolationPopUp={setShowViolationPopUp} stolIllegalParkingList={stolIllegalParkingList}
                     stopIllegalParkingList={stopIllegalParkingList} 
@@ -273,66 +271,37 @@ export default function MainDashboard() {
             )}
             {/* GRID 1 */}
             <SideBar />
-            <div className="w-[18vw] border- flex flex-col justify-between max-h-[97.5vh] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+            <div className="order-2 md:order-none w-full md:w-[18vw] md:min-w-52 flex flex-col justify-between max-h-64 md:max-h-[97.5vh] md:h-[97.5vh] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                 {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
                 <ViolationMonitoring violationData={violationData} setViolationDisplay={setViolationDisplay} />
             </div>
             
 
             {/* Grid 2 */}
-            <div className="flex-4 flex flex-col justify-between p-1 gap-1.5">
+            <div className="order-1 md:order-none min-w-0 h-[97.5vh] min-h-0 flex-4 flex flex-col justify-between px-1 gap-2 md:gap-1.5">
 
                 {/* MAP */}
-                <div className="relative bg-white text-center h-[80vh]">
+                <div className="relative bg-white text-center h-[55vh] min-h-80 md:h-auto lg:flex-1 lg:min-h-0">
                     <TrafficMap/>
                     <ApproachCards approachStates={approachStates} trafficLightData={trafficLightData} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
                     <VideoStream setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/>
                 </div>
 
                 {/* VIOLATION AND LINECHART */}
-                <div className="flex h-[40vh] space-x-2">
-                    <div className="bg-white flex-1 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                <div className="flex flex-col mb-2 sm:mb-0 lg:flex-row md:h-[28vh] lg:min-h-0 lg:flex-none gap-2 lg:space-x-2">
+                    <div className="order-3 lg:order-none bg-white min-h-56 lg:min-h-0 flex-1 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                         <ViolationDataDisplay violationDisplay={violationDisplay}/>
                     </div>
-                    <div className="bg-white flex-2 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                    <div className="order-1 lg:order-none bg-white min-h-[24rem] sm:min-h-[22rem] lg:min-h-0 flex-2 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                         <StatCard approachFilter={approachFilter} setApproachFilter={setApproachFilter} setDateFilter={setDateFilter} dateFilter={dateFilter} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
                     </div>
 
                     {/* SUMMARY */}
-                    <div className="flex-1 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                    <div className="order-2 lg:order-none flex-1 min-h-0 lg:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                         <SummaryCard currentSummaryData={currentSummaryData} flowConfiguration={flowConfiguration} densityConfiguration={densityConfiguration}/>
                     </div>
                 </div>
-                {/* Traffic Light Timers */}
-                {/* <div>
-                    <TrafficLightTimers trafficLightData={trafficLightData}/>
-                </div> */}
-
-                {/* Stat 1 */}
-                {/* <StatCard loc={"Sambat to Lspu"} statData={stolStatData} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/> */}
-
-                {/* Stat 2 */}
-                {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
             </div>
-
-
-            {/* Grid 3 */}
-            {/* <div className="w-[30%] flex flex-col justify-between p-1 gap-3"> */}
-
-                {/* Density and Occupancy Chart  */}
-                {/* <div className="mb-auto gap-2 pt-2.5 bg-white shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px]">
-                    <DensityChart densityData={densityData}/>                    
-                </div>
-
-                <VideoStream handleRequestDataTable={handleRequestDataTable} setShowTrafficLightControls={setShowTrafficLightControls} setShowViolationPopUp={setShowViolationPopUp}/> */}
-
-
-                {/* Stat 1 */}
-                {/* <StatCard loc={"Sambat to Sunstar"} statData={stosStatData} vehicleNumbers={stosVehicleNumbers} averageVehicleSpeed={stosAverageVehicleSpeed} condition={approachStates[2]}/> */}
-
-                {/* Stat 2 */}
-                {/* <StatCard loc={"Sambat to Complex"} statData={stocStatData} vehicleNumbers={stocVehicleNumbers} averageVehicleSpeed={stocAverageVehicleSpeed} condition={approachStates[3]}/> */}
-            {/* </div> */}
         </div>
     )
 }
