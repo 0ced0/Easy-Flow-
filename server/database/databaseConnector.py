@@ -165,7 +165,45 @@ def dbGetMonthlyData(cameraId, month=None):
     except ValueError as error:
         print(error)
 
-dbGetMonthlyData(1,"2026-08")
+def dbGetWeeklyData(cameraId, month):
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                FLOOR((DAY(created_at) - 1) / 7) + 1 AS week_number,
+                SUM(vehicle_count) AS total_vehicle_count,
+                AVG(traffic_flow) AS average_flow,
+                AVG(spatial_density) AS average_density
+            FROM traffic_interval
+            WHERE camera_id = %s
+            AND created_at >= STR_TO_DATE(CONCAT(%s, '-01'), '%Y-%m-%d')
+            AND created_at < DATE_ADD(
+                STR_TO_DATE(CONCAT(%s, '-01'), '%Y-%m-%d'),
+                INTERVAL 1 MONTH
+            )
+            GROUP BY FLOOR((DAY(created_at) - 1) / 7) + 1
+            ORDER BY week_number
+        """
+        values = [cameraId, month, month]
+
+        cursor.execute(query, values)
+        return cursor.fetchall()
+
+    except Error as error:
+        print(f"Database retrieval error: {error}")
+        return []
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if db is not None and db.is_connected():
+            db.close()
 
 def dbGetHourlyData(cameraId, date=None):
     db = None
@@ -210,6 +248,7 @@ def dbGetDailyData(cameraId, page, dateFilter):
 
             query = """
                 SELECT
+                    camera_id,
                     DATE(created_at) AS date,
                     DAY(created_at) AS day,
 
@@ -253,7 +292,6 @@ def dbGetDataTable(cameraId=None, page=None, dateFilter=None):
     db = None
     cursor = None
 
-    print(cameraId, page, dateFilter)
     try:
         db = mysql.connector.connect(**DB_CONFIG)
         cursor = db.cursor(dictionary=True)

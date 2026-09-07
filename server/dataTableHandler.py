@@ -2,6 +2,7 @@ from database.databaseConnector import dbGetHourlyData
 from database.databaseConnector import dbGetDataTable
 from database.databaseConnector import dbGetMonthlyData
 from database.databaseConnector import dbGetDailyData
+from database.databaseConnector import dbGetWeeklyData
 from flask import Blueprint, request
 import statistics
 dataRequest = Blueprint("dataRequest",__name__)
@@ -66,12 +67,35 @@ def getDailyData(cameraId, page, month):
     for row in response:
         
         allRows.append({
+            "camera_id" : row.get("camera_id"),
             "vehicleCount" : row.get("total_vehicle_count"),
             "date" : row.get("date").strftime("%m-%d-%Y"),
             "averageFlow" : int(row.get("average_flow")),
             "averageDensity" : int(row.get("average_density"))
         })
     return allRows
+
+def getWeeklyData(cameraId, month):
+    weeklyData = []
+    cameraId += 1
+    response = dbGetWeeklyData(cameraId, month)
+
+    for row in response:
+        weeklyData.append({
+            "weekNumber" : int(row.get("week_number")),
+            "totalVehicleCount" : int(row.get("total_vehicle_count")),
+            "averageFlow" : int(row.get("average_flow")),
+            "averageDensity" : int(row.get("average_density"))
+        })
+
+    return weeklyData
+
+@dataRequest.route("/get_weekly_data")
+def get_weekly_data():
+    cameraId = int(request.args.get("camera_id"))
+    month = request.args.get("dateFilter")
+    response = getWeeklyData(cameraId, month)
+    return response
 
 @dataRequest.route("/get_daily_data")
 def get_daily_data():
@@ -161,6 +185,5 @@ def get_summary_data():
     else:
         data = []
 
-    print(data)
     return data
 
