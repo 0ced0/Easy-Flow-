@@ -696,7 +696,9 @@ def dbGetViolationData():
                 violation_type,
                 time_stamp,
                 frame
-            FROM violations 
+            FROM violations
+            ORDER BY time_stamp DESC
+            LIMIT 40
         """
         cursor.execute(query)
 

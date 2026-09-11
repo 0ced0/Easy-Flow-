@@ -17,9 +17,14 @@ export default function SideBar () {
                 </div>
             </NavLink>
             <NavLink to={"/traffic_light_controls_page"}>
-                <svg className="sideBarIcons size-8 md:size-9 shrink-0 fill-current hover:bg-black/20" 
-                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
-                <path d="M224 32C188.7 32 160 60.7 160 96L160 448C160 536.4 231.6 608 320 608C408.4 608 480 536.4 480 448L480 96C480 60.7 451.3 32 416 32L224 32zM320 424C350.9 424 376 449.1 376 480C376 510.9 350.9 536 320 536C289.1 536 264 510.9 264 480C264 449.1 289.1 424 320 424zM376 320C376 350.9 350.9 376 320 376C289.1 376 264 350.9 264 320C264 289.1 289.1 264 320 264C350.9 264 376 289.1 376 320zM320 216C289.1 216 264 190.9 264 160C264 129.1 289.1 104 320 104C350.9 104 376 129.1 376 160C376 190.9 350.9 216 320 216z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="sideBarIcons size-8 md:size-9 shrink-0 hover:bg-black/20" aria-label="Traffic light controls">
+                    <title>Traffic light controls</title>
+                    <rect x="7" y="2" width="10" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="12" cy="6" r="1.75" fill="#DC2626" />
+                    <circle cx="12" cy="10" r="1.75" fill="#F59E0B" />
+                    <circle cx="12" cy="14" r="1.75" fill="#16A34A" />
+                    <path d="M12 18v4M9 22h6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
             </NavLink>
         </div>
     )
