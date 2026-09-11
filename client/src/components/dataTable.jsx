@@ -44,9 +44,9 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
         // console.log(dataTable)
 
         return(
-            <div className="popUpRoot">
+            <div className="relative h-full min-h-0 min-w-0 flex flex-col">
                 <div className="popUpBackground"></div>
-                <div className="popUpContainer relative min-w-[40rem] lg:min-w-0">
+                <div className="popUpContainer relative h-full min-h-0 min-w-0 flex flex-col">
                     <div className="flex gap-5 mb-3 border-b px-3 sm:px-5 border-[#D9D9D9] h-14 sm:h-[7vh] items-center">
 
                         {/* <h1 className="opacity-[80%]">{approaches[(tableId -1)]}</h1> */}
@@ -70,19 +70,21 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
                         <h3>Spatial Density</h3>
                     </div>
 
-                    {dataTable.length >= 1 ? 
-                        dataTable.map((row, id) => {
-                            return(
-                            <div key={id} className="text-xs sm:text-[0.8rem] bg-white py-4 grid grid-cols-4 gap-2 place-items-center">
-                                <h3>{row.date}</h3>
-                                <h3>{row.vehicleCount}</h3>
-                                <h3>{row.averageFlow} veh/hr</h3>
-                                <h3>{row.averageDensity} veh/km</h3>
-                            </div>
-                            )
-                        }) :
-                        <h3 className="mt-10 flex justify-center">No Data Available</h3> 
-                    }
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        {dataTable.length >= 1 ?
+                            dataTable.map((row, id) => {
+                                return(
+                                <div key={id} className="text-xs sm:text-[0.8rem] bg-white py-4 grid grid-cols-4 gap-2 place-items-center">
+                                    <h3>{row.date}</h3>
+                                    <h3>{row.vehicleCount}</h3>
+                                    <h3>{row.averageFlow} veh/hr</h3>
+                                    <h3>{row.averageDensity} veh/km</h3>
+                                </div>
+                                )
+                            }) :
+                            <h3 className="mt-10 flex justify-center">No Data Available</h3>
+                        }
+                    </div>
                     <div className="absolute top-1 right-3 sm:right-10 flex justify-center mt-2 gap-3 sm:gap-8 items-center">
                         <button onClick={() => {handlePage(0)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-1 hover:bg-black/20 hover:shadow-none">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">

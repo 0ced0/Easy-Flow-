@@ -96,10 +96,10 @@ export default function DataTablePage() {
 
     try{
         return(
-            <div className="p-1 pb-20 md:pb-1 flex flex-col md:flex-row w-full min-h-screen md:h-[99vh]">
+            <div className="p-1 pb-20 md:pb-1 flex flex-col md:flex-row w-full h-[100dvh] box-border overflow-x-hidden overflow-y-auto md:overflow-hidden">
                 <SideBar />
-                <div className="w-full min-w-0 py-3 px-3 sm:px-6 md:py-4 lg:px-10 overflow-y-auto">
-                    <div className="relative flex flex-wrap items-center gap-2 justify-between mb-3 md:mb-2">
+                <div className="w-full h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col py-3 px-3 sm:px-6 md:py-4 lg:px-10 overflow-visible md:h-full md:overflow-hidden">
+                    <div className="relative shrink-0 flex flex-wrap items-center gap-2 justify-between mb-3 md:mb-2">
                         <h1 className="w-full sm:w-auto font-medium text-[black]/70 text-xl sm:text-[1.7rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
                         <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4 sm:ml-auto sm:mr-3 lg:mr-5">
                             Approach
@@ -118,7 +118,7 @@ export default function DataTablePage() {
                         </button>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 px-2 sm:px-4 py-2 h-auto md:h-[30vh] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                    <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 px-2 sm:px-4 py-2 h-auto md:h-[clamp(140px,30dvh,260px)] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                         <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <TriSUmmaryCard dataCategory={dataCategory[0]} summaryValue={summaryData.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
@@ -129,13 +129,13 @@ export default function DataTablePage() {
                             <TriSUmmaryCard dataCategory={dataCategory[2]} summaryValue={summaryData.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 py-2 gap-4 h-auto lg:h-[60vh]">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 py-2 gap-4 h-auto flex-none md:flex-1 md:min-h-0">
                         {/* DATA TABLE */}
-                        <div className="hidden sm:block min-h-[28rem] overflow-x-auto lg:pr-3 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden lg:pr-3 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <DataTable setCamera_id={setCamera_id} dataTable={dailyData} tableId={tableId} setDataTable={setDailyData} setPage={setPage} page={page} monthFilter={monthFilter}/>
                         </div>
-                        <div className="h-[90%] md:h-full bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-3 p-2 sm:p-3 max-h-none lg:max-h-[65vh]">
-                            <div className="h-full sm:h-[55vh] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded w-full">
+                        <div className="h-[20rem] sm:h-[22rem] md:h-full min-h-0 min-w-0 bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-3 p-2 sm:p-3 overflow-hidden">
+                            <div className="h-full min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded w-full">
                                 <SummaryChart weeklyData={weeklyData}/>
                             </div>
                         </div>

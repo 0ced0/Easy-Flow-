@@ -255,4 +255,16 @@ export const getAllViolationData = async () => {
     }
 }
 
+export const getPaginatedViolationData = async (page, search = '', violationType = 'all') => {
+    try{
+        const params = new URLSearchParams({page: String(page), page_size: '10'})
+        if (search.trim()) params.set('search', search.trim())
+        if (violationType !== 'all') params.set('violation_type', violationType)
+
+        return await fetch(`http://127.0.0.1:5000/get_paginated_violation_data?${params}`)
+    }catch(error){
+        console.error(error)
+    }
+}
+
 

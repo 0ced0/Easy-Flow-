@@ -1,6 +1,7 @@
-import {useEffect, useMemo, useState} from 'react'
+import {useEffect, useState} from 'react'
 import SideBar from '../components/sideBar.jsx'
-import {getAllViolationData} from '../hooks/api.js'
+import ViolationDataDisplay from '../components/violationDataDisplay.jsx'
+import {getPaginatedViolationData} from '../hooks/api.js'
 
 const approaches = {
     1: 'Sambat to LSPU',
@@ -14,19 +15,31 @@ const violationTypes = {
     2: 'Illegal Parking'
 }
 
+const PAGE_SIZE = 10
+
 export default function ViolationRecordsPage() {
     const [violations, setViolations] = useState([])
+    const [totalViolations, setTotalViolations] = useState(0)
+    const [counts, setCounts] = useState({total: 0, loadingCount: 0, parkingCount: 0})
     const [search, setSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('all')
+    const [page, setPage] = useState(1)
+    const [selectedViolation, setSelectedViolation] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState('')
 
     useEffect(() => {
         const loadViolations = async () => {
+            setIsLoading(true)
+            setError('')
             try {
-                const response = await getAllViolationData()
+                const response = await getPaginatedViolationData(page, search, typeFilter)
                 if (!response?.ok) throw new Error('Unable to load violation records.')
-                setViolations(await response.json())
+                const data = await response.json()
+                setViolations(data.violations)
+                setSelectedViolation(data.violations[0] || null)
+                setTotalViolations(data.total)
+                setCounts(data.counts)
             } catch (requestError) {
                 setError(requestError.message)
             } finally {
@@ -35,26 +48,22 @@ export default function ViolationRecordsPage() {
         }
 
         loadViolations()
-    }, [])
+    }, [page, search, typeFilter])
 
-    const filteredViolations = useMemo(() => {
-        const searchTerm = search.trim().toLowerCase()
+    const totalPages = Math.max(Math.ceil(totalViolations / PAGE_SIZE), 1)
+    const firstRecord = totalViolations === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+    const lastRecord = Math.min(page * PAGE_SIZE, totalViolations)
+    const showInitialLoading = isLoading && violations.length === 0
 
-        return violations.filter((violation) => {
-            const matchesType = typeFilter === 'all' || String(violation.violation_type) === typeFilter
-            const matchesSearch = !searchTerm || [
-                violation.vehicle,
-                approaches[violation.camera_id],
-                violationTypes[violation.violation_type],
-                violation.time_stamp
-            ].some((value) => String(value ?? '').toLowerCase().includes(searchTerm))
+    const updateSearch = (value) => {
+        setSearch(value)
+        setPage(1)
+    }
 
-            return matchesType && matchesSearch
-        })
-    }, [violations, search, typeFilter])
-
-    const parkingCount = violations.filter((violation) => violation.violation_type === 2).length
-    const loadingCount = violations.filter((violation) => violation.violation_type === 1).length
+    const updateTypeFilter = (value) => {
+        setTypeFilter(value)
+        setPage(1)
+    }
 
     return (
         <div className="p-1 pb-20 md:pb-1 flex flex-col md:flex-row w-full min-h-screen md:h-[99vh]">
@@ -66,9 +75,9 @@ export default function ViolationRecordsPage() {
                 </div>
 
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 px-2 sm:px-4 py-2 h-auto md:h-[22vh] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded" aria-label="Violation totals">
-                    <SummaryCard label="Total Recorded Violations" value={violations.length} />
-                    <SummaryCard label="Illegal Parking" value={parkingCount} />
-                    <SummaryCard label="Illegal Loading/Unloading" value={loadingCount} />
+                    <SummaryCard label="Total Recorded Violations" value={counts.total} />
+                    <SummaryCard label="Illegal Parking" value={counts.parkingCount} />
+                    <SummaryCard label="Illegal Loading/Unloading" value={counts.loadingCount} />
                 </section>
 
                 <section className="mt-3 min-h-[32rem] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] flex flex-col">
@@ -78,11 +87,11 @@ export default function ViolationRecordsPage() {
                             <input
                                 type="search"
                                 value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Search vehicle, approach, or time"
+                                onChange={(event) => updateSearch(event.target.value)}
+                                placeholder="Search vehicle, camera, or time"
                                 className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4 text-sm outline-none"
                             />
-                            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4 text-sm outline-none">
+                            <select value={typeFilter} onChange={(event) => updateTypeFilter(event.target.value)} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4 text-sm outline-none">
                                 <option value="all">All Violation Types</option>
                                 <option value="1">Illegal Loading/Unloading</option>
                                 <option value="2">Illegal Parking</option>
@@ -90,34 +99,47 @@ export default function ViolationRecordsPage() {
                         </div>
                     </div>
 
-                    {isLoading && <p className="p-8 text-center text-[#363636]">Loading violation records...</p>}
+                    {showInitialLoading && <p className="p-8 text-center text-[#363636]">Loading violation records...</p>}
                     {error && <p className="p-8 text-center text-red-600">{error}</p>}
-                    {!isLoading && !error && (
+                    {!showInitialLoading && !error && (
                         <>
-                            <p className="border-b border-[#D9D9D9] px-3 sm:px-5 py-3 text-xs sm:text-sm text-[#363636]/70">Showing {filteredViolations.length} of {violations.length} recorded violations</p>
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full min-w-[42rem] text-left">
-                                    <thead className="border-b border-[#D9D9D9] text-xs sm:text-sm text-[#363636]/70">
-                                        <tr>
-                                            <th className="px-3 sm:px-5 py-3 font-medium">Vehicle</th>
-                                            <th className="px-3 sm:px-5 py-3 font-medium">Violation</th>
-                                            <th className="px-3 sm:px-5 py-3 font-medium">Approach</th>
-                                            <th className="px-3 sm:px-5 py-3 font-medium">Recorded At</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredViolations.map((violation, index) => (
-                                            <tr key={`${violation.vehicle}-${violation.time_stamp}-${index}`} className="border-b border-[#D9D9D9] hover:bg-black/10 text-xs sm:text-[0.8rem] text-[#363636]">
-                                                <td className="px-3 sm:px-5 py-4 font-medium">{violation.vehicle || 'Unknown vehicle'}</td>
-                                                <td className={`px-3 sm:px-5 py-4 font-bold ${violation.violation_type === 2 ? 'text-red-600' : 'text-orange-500'}`}>{violationTypes[violation.violation_type] || 'Unknown violation'}</td>
-                                                <td className="px-3 sm:px-5 py-4">{approaches[violation.camera_id] || `Camera ${violation.camera_id}`}</td>
-                                                <td className="px-3 sm:px-5 py-4">{violation.time_stamp}</td>
+                            <p className="border-b border-[#D9D9D9] px-3 sm:px-5 py-3 text-xs sm:text-sm text-[#363636]/70">Showing {firstRecord}-{lastRecord} of {totalViolations} recorded violations</p>
+                            <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+                                <div className="overflow-x-auto flex-1 min-w-0">
+                                    <table className="w-full min-w-[42rem] text-left">
+                                        <thead className="border-b border-[#D9D9D9] text-xs sm:text-sm text-[#363636]/70">
+                                            <tr>
+                                                <th className="px-3 sm:px-5 py-3 font-medium">Vehicle</th>
+                                                <th className="px-3 sm:px-5 py-3 font-medium">Violation</th>
+                                                <th className="px-3 sm:px-5 py-3 font-medium">Approach</th>
+                                                <th className="px-3 sm:px-5 py-3 font-medium">Recorded At</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {violations.map((violation, index) => (
+                                                <tr key={`${violation.vehicle}-${violation.time_stamp}-${index}`} onClick={() => setSelectedViolation(violation)} className={`cursor-pointer border-b border-[#D9D9D9] hover:bg-black/10 text-xs sm:text-[0.8rem] text-[#363636] ${selectedViolation === violation ? 'bg-black/10' : ''}`}>
+                                                    <td className="px-3 sm:px-5 py-4 font-medium">{violation.vehicle || 'Unknown vehicle'}</td>
+                                                    <td className={`px-3 sm:px-5 py-4 font-bold ${violation.violation_type === 2 ? 'text-red-600' : 'text-orange-500'}`}>{violationTypes[violation.violation_type] || 'Unknown violation'}</td>
+                                                    <td className="px-3 sm:px-5 py-4">{approaches[violation.camera_id] || `Camera ${violation.camera_id}`}</td>
+                                                    <td className="px-3 sm:px-5 py-4">{violation.time_stamp}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <aside className="min-h-64 lg:min-h-0 lg:w-[18rem] lg:shrink-0 flex flex-col overflow-hidden border-t lg:border-t-0 lg:border-l border-[#D9D9D9] bg-white">
+                                    <p className="shrink-0 px-3 py-2 text-xs font-medium text-[#363636]/70 border-b border-[#D9D9D9]">Selected violation</p>
+                                    {selectedViolation ? <div className="flex-1 min-h-0"><ViolationDataDisplay violationDisplay={selectedViolation} /></div> : <p className="p-6 text-center text-sm text-[#363636]/70">Select a recorded violation to view its evidence.</p>}
+                                </aside>
                             </div>
-                            {filteredViolations.length === 0 && <p className="p-8 text-center text-[#363636]">No violation records match the current filters.</p>}
+                            {violations.length === 0 && <p className="p-8 text-center text-[#363636]">No violation records match the current filters.</p>}
+                            {totalViolations > 0 && (
+                                <nav className="flex items-center justify-between gap-3 border-t border-[#D9D9D9] px-3 sm:px-5 py-3" aria-label="Violation history pages">
+                                    <button type="button" onClick={() => setPage(page - 1)} disabled={page === 1} className="rounded border border-[#D9D9D9] px-3 py-2 text-sm text-[#363636] disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+                                    <span className="text-xs sm:text-sm text-[#363636]/70">Page {page} of {totalPages}</span>
+                                    <button type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="rounded border border-[#D9D9D9] px-3 py-2 text-sm text-[#363636] disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                                </nav>
+                            )}
                         </>
                     )}
                 </section>

@@ -2,7 +2,7 @@ import {NavLink} from 'react-router-dom'
 
 export default function SideBar () {
     return(
-        <div className="fixed inset-x-0 bottom-0 z-[500] h-16 w-full bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-2 flex flex-row items-center justify-around gap-4 md:static md:h-[97.5vh] md:w-[3vw] md:min-w-12 md:p-1 md:flex-col md:justify-start md:gap-6">
+        <div className="fixed inset-x-0 bottom-0 z-[500] h-16 w-full bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-2 flex flex-row items-center justify-around gap-4 md:static md:h-full md:self-stretch md:flex-none md:shrink-0 md:min-h-0 md:w-[clamp(3rem,3vw,3.5rem)] md:p-1 md:flex-col md:justify-start md:gap-6">
             <NavLink to={"/"}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="sideBarIcons size-8 md:size-9 hover:bg-black/20">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />

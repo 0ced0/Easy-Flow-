@@ -53,7 +53,7 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
     }, [currentSummaryData, flowConfiguration, densityConfiguration])
 
     return(
-    <div className="relative h-auto lg:h-full min-h-64 lg:min-h-0 z-10 overflow-hidden">
+    <div className="relative h-auto lg:h-full min-h-64 lg:min-h-0 min-w-0 z-10 overflow-hidden lg:overflow-y-auto">
         {/* BACKGROUND */}
         <div className="absolute z-50 bg-[#0000FF]/10 inset-0"></div>
         <div className="inset-0 absolute z-100 flex flex-col p-3 lg:p-2 space-y-1.5 min-w-0">

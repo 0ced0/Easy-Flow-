@@ -730,3 +730,63 @@ def dbGetAllViolationData():
     except Error as error:
         print(error)
         return []
+
+def dbGetViolationPage(page=1, pageSize=10, searchTerm="", violationType=None):
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        filters = []
+        params = []
+        if violationType in (1, 2):
+            filters.append("violation_type = %s")
+            params.append(violationType)
+        if searchTerm:
+            filters.append("""
+                (
+                    LOWER(vehicle) LIKE %s
+                    OR LOWER(CAST(time_stamp AS CHAR)) LIKE %s
+                    OR CAST(camera_id AS CHAR) LIKE %s
+                )
+            """)
+            searchValue = f"%{searchTerm.lower()}%"
+            params.extend([searchValue, searchValue, searchValue])
+
+        whereClause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        cursor.execute(f"SELECT COUNT(*) AS total FROM violations {whereClause}", params)
+        total = cursor.fetchone()["total"]
+
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(violation_type = 1), 0) AS loadingCount,
+                COALESCE(SUM(violation_type = 2), 0) AS parkingCount
+            FROM violations
+        """)
+        counts = cursor.fetchone()
+
+        offset = (page - 1) * pageSize
+        cursor.execute(f"""
+            SELECT
+                camera_id,
+                vehicle,
+                violation_type,
+                time_stamp,
+                frame
+            FROM violations
+            {whereClause}
+            ORDER BY time_stamp DESC
+            LIMIT %s OFFSET %s
+        """, [*params, pageSize, offset])
+
+        return {"violations": cursor.fetchall(), "total": total, "counts": counts}
+    except Error as error:
+        print(error)
+        return {"violations": [], "total": 0, "counts": {"total": 0, "loadingCount": 0, "parkingCount": 0}}
+    finally:
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()

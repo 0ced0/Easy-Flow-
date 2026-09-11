@@ -1,105 +1,74 @@
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useMap } from 'react-leaflet'
+
+const cardOffsets = [
+    [0.44, 0.38],
+    [0.60, 0.42],
+    [0.54, 0.66],
+    [0.38, 0.62],
+]
+
+const statusColors = {
+    'FREE FLOW': 'text-green-600',
+    SLOWDOWN: 'text-orange-400',
+    CONGESTED: 'text-red-600',
+}
+
 export default function ApproachCards({approachStates, trafficLightData, stolStatData, stopStatData, stocStatData, stosStatData}) {
-    try{
-        const timers = trafficLightData[0]?.map(row=>{return(row[1])})
-        const colors = trafficLightData[0]?.map(row=>{return(row[0])})
-        const colorSelection = {
-            "FREE FLOW" : "text-green-600",
-            "SLOWDOWN" : "text-orange-400",
-            "CONGESTED" : "text-red-600"
-        }
+    const map = useMap()
+    const pane = map.getPane('overlayPane')
+    const [positions] = useState(() => {
+        const size = map.getSize()
+        return cardOffsets.map(([x, y]) => map.containerPointToLatLng([size.x * x, size.y * y]))
+    })
+    const [, setMapVersion] = useState(0)
+    const trafficLightRows = trafficLightData?.[0] ?? []
+    const cards = [
+        {label: 'Sambat to LSPU', data: stolStatData, position: 0},
+        {label: 'Sambat to Patimbao', data: stopStatData, position: 1},
+        {label: 'Sambat to Complex', data: stocStatData, position: 2},
+        {label: 'Sambat to Sunstar', data: stosStatData, position: 3},
+    ]
 
-        // console.log("LSPU", stolStatData)
-        // console.log("PATIMBAO", stopStatData)
-        // console.log("COMPLEX", stocStatData)
-        // console.log("SUNSTAR", stosStatData)
-        return(
-            <div className="block absolute inset-0 z-100 w-full h-full lg:inset-auto lg:left-80 lg:w-[50%] lg:h-full">
-                 {colors && (
-                    <>
-                    <div className="relative w-full h-full">
+    useEffect(() => {
+        const updateCardCoordinates = () => setMapVersion((version) => version + 1)
+        map.on('zoomend', updateCardCoordinates)
 
-                    </div>
-                    <div className="grid grid-cols-2 card absolute top-3 left-3 lg:top-30 lg:left-45">
-                        <div>
-                            <p className="mb-[0.38rem] font-medium">Sambat to LSPU</p>
-                            <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stolStatData.vehicleFlow}vh/hr</p>
-                            <p className="text-[0.5rem] ">Timer:</p>
-                            <p className={`text-[0.4rem] font-medium ${colorSelection[approachStates[0]]}`}>{approachStates[0]}</p>
-                        </div>
-                        <div className="text-end">
-                            <svg className="size-3 ml-auto" 
-                            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-                            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round">
-                            </g><g id="SVGRepo_iconCarrier"> 
-                            <circle cx="12" cy="12" r="11" fill={colors[0]}></circle> 
-                            </g></svg>
-                            <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{stolStatData.density}vh/km</p>
-                            <p className="pr-1 font-bold">{timers[0]}</p>
-                        </div>
-                    </div>
-                    <div className="card grid grid-cols-2 absolute top-3 right-3 lg:top-45 lg:right-45">
-                        <div>
-                            <p className="mb-[0.38rem] font-medium">Sambat to Patimbao</p>
-                            <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stopStatData.vehicleFlow}vh/hr</p>
-                            <p className="text-[0.5rem] ">Timer:</p>
-                            <p className={`text-[0.4rem] font-medium ${colorSelection[approachStates[1]]}`}>{approachStates[1]}</p>
-                        </div>
-                        <div className="text-end">
-                            <svg className="size-3 ml-auto" 
-                            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-                            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round">
-                            </g><g id="SVGRepo_iconCarrier"> 
-                            <circle cx="12" cy="12" r="11" fill={colors[1]}></circle> 
-                            </g></svg>
-                            <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{stopStatData.density}vh/km</p>
-                            <p className="pr-1 font-bold">{timers[1]}</p>
+        return () => map.off('zoomend', updateCardCoordinates)
+    }, [map])
+
+    if (!pane) return null
+
+    return createPortal(
+        <>
+            {cards.map((card, index) => {
+                const point = map.latLngToLayerPoint(positions[index])
+                const timer = trafficLightRows[index]?.[1] ?? '--'
+                const lightColor = trafficLightRows[index]?.[0] ?? '#A9A9A9'
+                const condition = approachStates[index] ?? 'Unavailable'
+
+                return (
+                    <div key={card.label} style={{left: point.x, top: point.y, pointerEvents: 'auto'}} className="absolute -translate-x-1/2 -translate-y-1/2">
+                        <div className="card grid grid-cols-2">
+                            <div>
+                                <p className="mb-[0.38rem] font-medium">{card.label}</p>
+                                <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{card.data?.vehicleFlow ?? 0}vh/hr</p>
+                                <p className="text-[0.5rem]">Timer:</p>
+                                <p className={`text-[0.4rem] font-medium ${statusColors[condition] ?? 'text-[#363636]'}`}>{condition}</p>
+                            </div>
+                            <div className="text-end">
+                                <svg className="size-3 ml-auto" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="11" fill={lightColor} />
+                                </svg>
+                                <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{card.data?.density ?? 0}vh/km</p>
+                                <p className="pr-1 font-bold">{timer}</p>
+                            </div>
                         </div>
                     </div>
-                    <div className="card grid grid-cols-2 absolute bottom-3 right-3 lg:bottom-38 lg:right-55">
-                        <div>
-                            <p className="mb-[0.38rem] font-medium">Sambat to Complex</p>
-                            <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stocStatData.vehicleFlow}vh/hr</p>
-                            <p className="text-[0.5rem] ">Timer:</p>
-                            <p className={`text-[0.4rem] font-medium ${colorSelection[approachStates[2]]}`}>{approachStates[2]}</p>
-                        </div>
-                        <div className="text-end">
-                            <svg className="size-3 ml-auto" 
-                            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-                            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round">
-                            </g><g id="SVGRepo_iconCarrier"> 
-                            <circle cx="12" cy="12" r="11" fill={colors[2]}></circle> 
-                            </g></svg>
-                            <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{stocStatData.density}vh/km</p>
-                            <p className="pr-1 font-bold">{timers[2]}</p>
-                        </div>
-                    </div>
-                    <div className="card grid grid-cols-2 absolute bottom-3 left-3 lg:bottom-55 lg:left-35">
-                        <div>
-                            <p className="mb-[0.38rem] font-medium">Sambat to Sunstar</p>
-                            <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{stosStatData.vehicleFlow}vh/hr</p>
-                            <p className="text-[0.5rem] ">Timer:</p>
-                            <p className={`text-[0.4rem] font-medium ${colorSelection[approachStates[3]]}`}>{approachStates[3]}</p>
-                        </div>
-                        <div className="text-end">
-                            <svg className="size-3 ml-auto" 
-                            viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-                            <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round">
-                            </g><g id="SVGRepo_iconCarrier"> 
-                            <circle cx="12" cy="12" r="11" fill={colors[3]}></circle> 
-                            </g></svg>
-                            <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{stosStatData.density}vh/km</p>
-                            <p className="pr-1 font-bold">{timers[3]}</p>
-                        </div>
-                    </div>
-                    </>
-                 )}   
-            </div>
-        )
-    }catch(error){
-        console.error(error)
-    }
+                )
+            })}
+        </>,
+        pane,
+    )
 }

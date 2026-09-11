@@ -88,13 +88,13 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
 
     // console.log(currentData)
     return (
-        <div className="min-h-[24rem] sm:min-h-[220px] h-full relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
+        <div className="min-h-[24rem] sm:min-h-[220px] lg:min-h-0 h-full min-w-0 relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
 
             {/* Background */}
             <div className="absolute z-10 inset-0 bg-[#0000FF] opacity-[10%]"></div>
 
-            <div className="h-[100%] gap-2 z-20 absolute flex flex-col sm:flex-row p-1 inset-0">
-                <div className="chart relative min-h-64 sm:min-h-0 w-full sm:w-auto min-w-0">
+            <div className="h-[100%] min-h-0 gap-2 z-20 absolute flex flex-col sm:flex-row p-1 inset-0">
+                <div className="chart relative min-h-64 sm:min-h-0 lg:min-h-0 w-full sm:w-auto min-w-0">
                 <div className="flex flex-wrap items-center border-b border-[#D9D9D9] font-medium text-sm sm:text-base text-start mb-2 px-1 sm:px-2 py-0.5">
                     <button ref={dateButtonRef} onClick={() => {setShowDateDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2 min-h-11 sm:min-h-0">
                         Date
@@ -148,7 +148,7 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
 
 
                 {/* Stat Numbers */}
-                <div className="relative flex flex-row min-h-24 sm:min-h-0 sm:flex-col justify-between gap-3 sm:gap-2 w-full sm:w-[6rem]">
+                <div className="relative flex flex-row min-h-24 sm:min-h-0 lg:min-h-0 sm:flex-col justify-between gap-3 sm:gap-2 w-full sm:w-[6rem]">
 
                     <div className="counter h-full min-h-20 sm:min-h-0 flex-1 sm:flex-none text-sm">
                         <p className="text-xs sm:text-sm">Vehicle Count</p>
