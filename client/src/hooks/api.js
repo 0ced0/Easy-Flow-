@@ -247,4 +247,12 @@ export const getViolationData = async () => {
     }
 }
 
+export const getAllViolationData = async () => {
+    try{
+        return await fetch("http://127.0.0.1:5000/get_all_violation_data")
+    }catch(error){
+        console.error(error)
+    }
+}
+
 

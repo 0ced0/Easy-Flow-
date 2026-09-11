@@ -34,6 +34,15 @@ modelPath = Path(base_dir/"../models/training/yoloModels/sModels/trainingBatch2/
 byteTrack = Path(base_dir/"../models/training/bytetrack.yaml")
 capLock = threading.Lock()
 
+# Violation thresholds operate on road points in the 50%-resized inference frame.
+# STATIONARY_DISTANCE_THRESHOLD is an empirical YOLO-box-jitter tolerance and should
+# be tuned with recorded footage for each camera setup.
+VIOLATION_CHECK_INTERVAL = 1.0
+STATIONARY_DISTANCE_THRESHOLD = 20
+LOADING_UNLOADING_MIN_SECONDS = 10
+ILLEGAL_PARKING_MIN_SECONDS = 120
+VIOLATION_TRACK_TIMEOUT_SECONDS = 5
+
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
 videoPath = Path(base_dir/"sambat_to_lspu.mp4")
@@ -63,6 +72,8 @@ class ComputerVisionComponent:
         self.nextIntervalData = {}
         self.illegalParkingList = {}
         self.illegalLoadingUnloadingList = {}
+        self.violationTracks = {}
+        self.violationTracksLock = threading.Lock()
 
     def encodeFrame(self, frame):
         success, buffer = cv2.imencode(
@@ -86,138 +97,157 @@ class ComputerVisionComponent:
         flow = (vehicleCount/timeInterval) * 3600
         return flow
 
-    def cleanIllegalParkingList(self):
-        allVehicles = list(self.allVehicles.keys())
-        violationList = list(self.illegalParkingList.keys())
+    def updateViolationTrack(self, trackId, vehicleName, bbox, vehicleCenter, roadPoint, violationDetectionArea):
+        contour = np.asarray(violationDetectionArea, dtype=np.int32).reshape((-1, 1, 2))
+        insideViolationArea = cv2.pointPolygonTest(contour, roadPoint, False) >= 0
+        now = time.perf_counter()
 
-        for vehicleId in violationList:
-            if vehicleId not in allVehicles:
-                del self.illegalParkingList[vehicleId] 
-
-    def cleanIllegalLoadingUnloadingList(self):
-        allVehicles = list(self.allVehicles.keys())
-        violationList = list(self.illegalLoadingUnloadingList.keys())
-
-        for vehicleId in violationList:
-            if vehicleId not in allVehicles:
-                del self.illegalLoadingUnloadingList[vehicleId]
-
-    def illegalParkingDetection(self):
-        allVehicles = self.allVehicles
-        violationList = self.illegalParkingList
-        timeStamp = datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p")
-        vehicleFlow = self.nextIntervalData.get("vehicleFlow")
-        self.cleanIllegalParkingList()
-        medianTrafficMovement, vehicleMovements = self.getTrafficMovement(allVehicles, violationList)
-
-        for vehicle in allVehicles:
-
-            motion = True
-            if vehicle not in violationList:
-                self.illegalParkingList[vehicle] = {
-                    "cameraId" : self.cameraId,
-                    "vehicle" : allVehicles.get(vehicle).get("name"),
-                    "violationType" : 2,
-                    "motion" : motion,
-                    "violationStatus" : 0,
-                    "vehicleCenter" : allVehicles.get(vehicle).get("vehicleCenter"),
-                    "frame" : None
+        with self.violationTracksLock:
+            track = self.violationTracks.get(trackId)
+            if track is None:
+                self.violationTracks[trackId] = {
+                    "trackId": trackId,
+                    "vehicleName": vehicleName,
+                    "bbox": bbox,
+                    "center": vehicleCenter,
+                    "roadPoint": roadPoint,
+                    "lastSeen": now,
+                    "anchorPosition": roadPoint if insideViolationArea else None,
+                    "stationarySince": None,
+                    "insideViolationArea": insideViolationArea,
+                    "wasInsideViolationArea": False,
+                    "loadingCandidate": False,
+                    "loadingCandidateEvidence": None,
+                    "parkingRecorded": False,
                 }
-                continue  
+                return
 
-            vehicleCenter = allVehicles.get(vehicle).get("vehicleCenter")
-            distanceMoved = vehicleMovements.get(vehicle).get("movement")
-            violationStatus = violationList.get(vehicle).get("violationStatus")
-            vehicleName = allVehicles.get(vehicle).get("name")
-            frame = violationList.get(vehicle).get("frame")
-            if distanceMoved < 100 and (medianTrafficMovement is None or medianTrafficMovement >= 10) and (vehicleFlow > 200):
-                motion = False
-                match violationStatus:
-                    case 1:
-                        violationStatus = 2
+            track.update({
+                "vehicleName": vehicleName,
+                "bbox": bbox,
+                "center": vehicleCenter,
+                "roadPoint": roadPoint,
+                "lastSeen": now,
+                "insideViolationArea": insideViolationArea,
+            })
 
-                        cx, cy = vehicleCenter
-                        boxStart = (int(cx - 50), int(cy - 50))
-                        boxEnd = (int(cx + 50), int(cy + 50))
-                        frame = self.frame.copy()
-                        frame = cv2.rectangle(
-                            frame,
-                            boxStart,
-                            boxEnd,
-                            (0,0,255),
-                            1
-                        )
+    def captureViolationEvidence(self, bbox):
+        if self.frame is None:
+            return None
 
-                        frame = self.encodeFrame(frame)
-                        violationData = {
-                            "cameraId" : self.cameraId,
-                            "vehicle" : vehicleName,
-                            "violationType" : 2,
-                            "timeStamp" : timeStamp,
-                            "frame" : frame
-                        }
+        x1, y1, x2, y2 = bbox
+        evidenceFrame = self.frame.copy()
+        cv2.rectangle(evidenceFrame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        return self.encodeFrame(evidenceFrame)
 
-                        databaseConnector.postViolationData(violationData)
+    def resetStopEvent(self, track, anchorPosition):
+        track.update({
+            "anchorPosition": anchorPosition,
+            "stationarySince": None,
+            "loadingCandidate": False,
+            "loadingCandidateEvidence": None,
+            "parkingRecorded": False,
+        })
 
-                    case 0:
-                        violationStatus = 1
+    def finishStopEvent(self, track, now, reason, pendingViolations):
+        stationarySince = track["stationarySince"]
+        if stationarySince is None:
+            self.resetStopEvent(track, track["roadPoint"])
+            return
 
-            self.illegalParkingList[vehicle] = {
-                "cameraId" : self.cameraId,
-                "vehicle" : vehicleName,
-                "motion" : motion,
-                "violationType": 2,
-                "violationStatus" : violationStatus,
-                "distanceMoved" : distanceMoved,
-                "vehicleCenter" : vehicleCenter,
-                "timeStamp" : timeStamp,
-                "frame" : frame
+        stationaryDuration = now - stationarySince
+        if (
+            track["loadingCandidate"]
+            and not track["parkingRecorded"]
+            and LOADING_UNLOADING_MIN_SECONDS <= stationaryDuration < ILLEGAL_PARKING_MIN_SECONDS
+        ):
+            evidence = track["loadingCandidateEvidence"]
+            if evidence is not None:
+                pendingViolations.append((track["trackId"], track["vehicleName"], 1, evidence, stationaryDuration))
+                print(f"[Violation] ID {track['trackId']} loading/unloading confirmed: {stationaryDuration:.1f}s ({reason})")
+
+        if track["stationarySince"] is not None:
+            print(f"[Violation] ID {track['trackId']} stop reset ({reason})")
+        self.resetStopEvent(track, track["roadPoint"])
+
+    def updateViolationStates(self):
+        now = time.perf_counter()
+        pendingViolations = []
+
+        with self.violationTracksLock:
+            staleTrackIds = [
+                trackId
+                for trackId, track in self.violationTracks.items()
+                if now - track["lastSeen"] > VIOLATION_TRACK_TIMEOUT_SECONDS
+            ]
+            for trackId in staleTrackIds:
+                del self.violationTracks[trackId]
+                print(f"[Violation] ID {trackId} stale track removed")
+
+            for track in self.violationTracks.values():
+                if not track["insideViolationArea"]:
+                    if track["wasInsideViolationArea"]:
+                        self.finishStopEvent(track, now, "left ROI", pendingViolations)
+                    track["wasInsideViolationArea"] = False
+                    track["anchorPosition"] = None
+                    continue
+
+                if not track["wasInsideViolationArea"]:
+                    self.resetStopEvent(track, track["roadPoint"])
+                    track["wasInsideViolationArea"] = True
+                    continue
+
+                anchorPosition = track["anchorPosition"]
+                if anchorPosition is None:
+                    track["anchorPosition"] = track["roadPoint"]
+                    continue
+
+                distanceMoved = math.dist(track["roadPoint"], anchorPosition)
+                if distanceMoved > STATIONARY_DISTANCE_THRESHOLD:
+                    self.finishStopEvent(track, now, "movement detected", pendingViolations)
+                    continue
+
+                if track["stationarySince"] is None:
+                    track["stationarySince"] = now
+                    print(f"[Violation] ID {track['trackId']} stop started")
+                    continue
+
+                stationaryDuration = now - track["stationarySince"]
+                if (
+                    stationaryDuration >= LOADING_UNLOADING_MIN_SECONDS
+                    and not track["loadingCandidate"]
+                    and not track["parkingRecorded"]
+                ):
+                    track["loadingCandidate"] = True
+                    track["loadingCandidateEvidence"] = self.captureViolationEvidence(track["bbox"])
+                    print(f"[Violation] ID {track['trackId']} loading candidate: {stationaryDuration:.1f}s")
+
+                if stationaryDuration >= ILLEGAL_PARKING_MIN_SECONDS and not track["parkingRecorded"]:
+                    evidence = self.captureViolationEvidence(track["bbox"])
+                    if evidence is not None:
+                        pendingViolations.append((track["trackId"], track["vehicleName"], 2, evidence, stationaryDuration))
+                        track["parkingRecorded"] = True
+                        track["loadingCandidate"] = False
+                        track["loadingCandidateEvidence"] = None
+                        print(f"[Violation] ID {track['trackId']} parking confirmed: {stationaryDuration:.1f}s")
+
+        for trackId, vehicleName, violationType, evidence, stationaryDuration in pendingViolations:
+            violationData = {
+                "cameraId": self.cameraId,
+                "vehicle": vehicleName,
+                "violationType": violationType,
+                "timeStamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p"),
+                "frame": evidence,
             }
+            databaseConnector.postViolationData(violationData)
+
+    # Illegal loading/unloading is an operational short-stop proxy. The current
+    # vehicle-only model does not visually verify passengers or cargo activity.
+    def illegalParkingDetection(self):
+        self.updateViolationStates()
 
     def illegalLoadingUnloadingDetection(self):
-        allVehicles = self.allVehicles
-        violationList = self.illegalLoadingUnloadingList
-        timeStamp = datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p")
-
-        self.cleanIllegalLoadingUnloadingList()
-        medianTrafficMovement, vehicleMovements = self.getTrafficMovement(allVehicles, violationList)
-
-        for vehicleId in allVehicles:
-            if vehicleId not in violationList:
-                self.illegalLoadingUnloadingList[vehicleId] = {
-                    "cameraId" : self.cameraId,
-                    "vehicleName" : allVehicles.get(vehicleId).get("name"),
-                    "violationStatus" : 0,
-                    "vehicleCenter" : allVehicles.get(vehicleId).get("vehicleCenter")
-                }
-                continue
-
-            vehicleMovement = vehicleMovements.get(vehicleId).get("movement")
-            violationStatus = self.illegalLoadingUnloadingList.get(vehicleId).get("violationStatus")
-
-            if medianTrafficMovement is None:
-                pass
-
-            elif vehicleMovement < 100 and medianTrafficMovement >= 100:
-
-                match violationStatus:
-                    case 0:
-                        violationStatus = 1
-                    case 1:
-                        violationStatus = 2
-                    case 2:
-                        violationStatus = 3
-                    case 3:
-                        violationStatus =3
-            else:
-                violationStatus = 0
-
-            self.illegalLoadingUnloadingList[vehicleId] = {
-                "cameraId" : self.cameraId,
-                "vehicleName" : allVehicles.get(vehicleId).get("name"),
-                "violationStatus" : violationStatus,
-                "vehicleCenter" : allVehicles.get(vehicleId).get("vehicleCenter")
-            }
+        self.updateViolationStates()
 
     def getTrafficMovement(self, allVehicles, violationList):
         trafficMovement = []
@@ -239,7 +269,7 @@ class ComputerVisionComponent:
         medianTrafficMovement = statistics.median(trafficMovement) if len(vehicleMovements) > 4 else None
         return medianTrafficMovement, vehicleMovements
     
-    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation):
+    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation, violationDetectionArea):
         crossProductReference = "counterCrossProduct"
 
         # DISPLAYING ALL VEHICLES
@@ -266,6 +296,16 @@ class ComputerVisionComponent:
             cx = (x1+x2) // 2
             cy = (y1+y2) // 2
             vehicleCenter = (cx,cy)
+            roadPoint = (int((x1 + x2) / 2), int(y2))
+
+            self.updateViolationTrack(
+                currentVehicleId,
+                vehicleName,
+                (x1, y1, x2, y2),
+                vehicleCenter,
+                roadPoint,
+                violationDetectionArea,
+            )
 
             frame, crossProduct = self.trackVehicle(frame, vehicleCenter, countingLine)
 
@@ -456,7 +496,7 @@ class ComputerVisionComponent:
             boxes = results[0].boxes
             
             if (boxes != None and len(boxes) > 0):
-                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation)
+                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation, violationDetectionArea)
 
                 with capLock:
                     self.vehicleCount = vehicleCount

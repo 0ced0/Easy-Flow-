@@ -16,6 +16,14 @@ export default function SideBar () {
                     </svg>
                 </div>
             </NavLink>
+            <NavLink to={"/violation_records"}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="sideBarIcons size-8 md:size-9 hover:bg-black/20" aria-label="Traffic violation history">
+                    <title>Traffic violation history</title>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 21 20.25H3L12 3Z" />
+                    <path strokeLinecap="round" d="M12 9v5" />
+                    <path strokeLinecap="round" d="M12 17.25h.01" />
+                </svg>
+            </NavLink>
             <NavLink to={"/traffic_light_controls_page"}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="sideBarIcons size-8 md:size-9 shrink-0 hover:bg-black/20" aria-label="Traffic light controls">
                     <title>Traffic light controls</title>

@@ -707,3 +707,26 @@ def dbGetViolationData():
         return data
     except Error as error:
         print(error)
+
+def dbGetAllViolationData():
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                camera_id,
+                vehicle,
+                violation_type,
+                time_stamp
+            FROM violations
+            ORDER BY time_stamp DESC
+        """
+        cursor.execute(query)
+
+        return cursor.fetchall()
+    except Error as error:
+        print(error)
+        return []

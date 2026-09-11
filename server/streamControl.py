@@ -7,7 +7,7 @@ import numpy as np
 import os
 import atexit
 
-from CV import ComputerVisionComponent;
+from CV import ComputerVisionComponent, VIOLATION_CHECK_INTERVAL;
 from trafficForecast import forecastingComponent;
 from trafficLightControl import TLC;
 from simulation.sumoController import SC;
@@ -104,8 +104,8 @@ class streamControl:
             
     def violationMonitoringLoop(self):
         while self.running:
-            self.CV.illegalParkingDetection()
-            time.sleep(30)
+            self.CV.updateViolationStates()
+            time.sleep(VIOLATION_CHECK_INTERVAL)
 
     def cvLoop(self):
         
@@ -336,14 +336,19 @@ def stopLines(frame):
 
     endLine = (elA, elB)
 
+    # VIOLATION DETECTION AREA - PATIMBAO
     polygonLines = np.array([
-        [int(newWidth * 0.53), int(newHeight * 0.25)], 
-        [int(newWidth * 0), int(newHeight * 0.6)], 
-        [int(newWidth * 0), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 0.5)], 
-        [int(newWidth * 0.75), int(newHeight * 0.28)]])
-    
+        [int(newWidth * 0.00), int(newHeight * 0.40)],
+        [int(newWidth * 0.08), int(newHeight * 0.35)],
+        [int(newWidth * 0.20), int(newHeight * 0.31)],
+        [int(newWidth * 0.38), int(newHeight * 0.30)],
+        [int(newWidth * 0.58), int(newHeight * 0.30)],
+        [int(newWidth * 0.78), int(newHeight * 0.34)],
+        [int(newWidth * 0.94), int(newHeight * 0.42)],
+        [int(newWidth * 1.00), int(newHeight * 0.48)],
+        [int(newWidth * 1.00), int(newHeight * 1.00)],
+        [int(newWidth * 0.00), int(newHeight * 1.00)]
+    ])    
     violationDetectionArea = polygonLines
 
     return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)       
@@ -445,14 +450,20 @@ def stocLines(frame):
 
     endLine = (elA, elB)
 
+    # VIOLATION DETECTION AREA - COMPLEX
     polygonLines = np.array([
-        [int(newWidth * 0.53), int(newHeight * 0.25)], 
-        [int(newWidth * 0), int(newHeight * 0.6)], 
-        [int(newWidth * 0), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 0.5)], 
-        [int(newWidth * 0.75), int(newHeight * 0.28)]])
-
+        [int(newWidth * 0.00), int(newHeight * 0.48)],
+        [int(newWidth * 0.10), int(newHeight * 0.40)],
+        [int(newWidth * 0.24), int(newHeight * 0.30)],
+        [int(newWidth * 0.40), int(newHeight * 0.21)],
+        [int(newWidth * 0.55), int(newHeight * 0.18)],
+        [int(newWidth * 0.70), int(newHeight * 0.20)],
+        [int(newWidth * 0.84), int(newHeight * 0.30)],
+        [int(newWidth * 0.95), int(newHeight * 0.44)],
+        [int(newWidth * 1.00), int(newHeight * 0.56)],
+        [int(newWidth * 1.00), int(newHeight * 1.00)],
+        [int(newWidth * 0.00), int(newHeight * 1.00)]
+    ])
     violationDetectionArea = polygonLines
 
     return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)

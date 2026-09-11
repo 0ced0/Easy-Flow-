@@ -1,4 +1,4 @@
-from database.databaseConnector import dbGetViolationData
+from database.databaseConnector import dbGetAllViolationData, dbGetViolationData
 from flask import Blueprint
 import cv2
 import base64
@@ -11,3 +11,7 @@ def getViolationData():
     for row in data:
         row["frame"] = bytes(row["frame"]).decode("utf-8")
     return data
+
+@violationTable.route("/get_all_violation_data")
+def getAllViolationData():
+    return dbGetAllViolationData()
