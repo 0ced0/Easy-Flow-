@@ -96,16 +96,16 @@ export default function DataTablePage() {
 
     try{
         return(
-            <div className="p-1 pb-20 md:pb-1 flex flex-col md:flex-row w-full h-[100dvh] box-border overflow-x-hidden overflow-y-auto md:overflow-hidden">
-                <SideBar />
-                <div className="w-full h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col py-3 px-3 sm:px-6 md:py-4 lg:px-10 overflow-visible md:h-full md:overflow-hidden">
-                    <div className="relative shrink-0 flex flex-wrap items-center gap-2 justify-between mb-3 md:mb-2">
-                        <h1 className="w-full sm:w-auto font-medium text-[black]/70 text-xl sm:text-[1.7rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
-                        <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4 sm:ml-auto sm:mr-3 lg:mr-5">
+            <div className="p-[0.1875rem] pb-15 md:pb-[0.1875rem] flex flex-col md:flex-row w-full h-[100dvh] box-border overflow-x-hidden overflow-y-auto md:overflow-hidden">
+                <SideBar compact />
+                <div className="w-full h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col py-[0.5625rem] px-[0.5625rem] sm:px-[1.125rem] md:py-[0.75rem] lg:px-[1.875rem] overflow-visible md:h-full md:overflow-hidden">
+                    <div className="relative shrink-0 flex flex-wrap items-center gap-1.5 justify-between mb-[0.5625rem] md:mb-[0.375rem]">
+                        <h1 className="w-full sm:w-auto font-medium text-[black]/70 text-[0.9375rem] sm:text-[1.275rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
+                        <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[11.25px] py-1.5 px-3 sm:ml-auto sm:mr-[0.5625rem] lg:mr-[0.9375rem] text-[0.75rem]">
                             Approach
                         </button>
                         {showApproachDropDown &&(
-                            <div ref={approachButtonRef} className="z-100 absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-full sm:w-[30vh] left-0 sm:left-auto sm:right-44 top-full mt-1 flex flex-col">
+                            <div ref={approachButtonRef} className="z-100 absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-full sm:w-[22.5vh] left-0 sm:left-auto sm:right-33 top-full mt-[0.1875rem] flex flex-col text-[0.75rem]">
                                 <button onClick={() => {handleApproachFilter(1)}} className="videoStreamButton">Sambat to LSPU</button>
                                 <button onClick={() => {handleApproachFilter(2)}} className="videoStreamButton">Sambat to Patimbao</button>
                                 <button onClick={() => {handleApproachFilter(4)}} className="videoStreamButton">Sambat to Complex</button>
@@ -113,28 +113,28 @@ export default function DataTablePage() {
                             </div>
                         )}
 
-                        <button className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[15px] py-2 px-4">
-                            <input onChange={(event) => {handleMonthFilter(event)}} type="month" value={monthFilter}></input>
+                        <button className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[11.25px] py-1.5 px-3 text-[0.75rem]">
+                            <input onChange={(event) => {handleMonthFilter(event)}} type="month" value={monthFilter} className="text-[0.75rem]"></input>
                         </button>
                     </div>
                     
-                    <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 px-2 sm:px-4 py-2 h-auto md:h-[clamp(140px,30dvh,260px)] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                        <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                    <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-[0.5625rem] md:gap-[0.9375rem] px-1.5 sm:px-3 py-1.5 h-auto md:h-[clamp(120px,25dvh,215px)] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <TriSUmmaryCard dataCategory={dataCategory[0]} summaryValue={summaryData.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
-                        <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <TriSUmmaryCard dataCategory={dataCategory[1]} summaryValue={summaryData.averageVehicleFlow} previousValue={previousSummaryData?.averageVehicleFlow} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
-                        <div className="min-h-36 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <TriSUmmaryCard dataCategory={dataCategory[2]} summaryValue={summaryData.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 py-2 gap-4 h-auto flex-none md:flex-1 md:min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 py-1.5 gap-3 h-auto flex-none md:flex-1 md:min-h-0">
                         {/* DATA TABLE */}
-                        <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden lg:pr-3 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden lg:pr-[0.5625rem] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                             <DataTable setCamera_id={setCamera_id} dataTable={dailyData} tableId={tableId} setDataTable={setDailyData} setPage={setPage} page={page} monthFilter={monthFilter}/>
                         </div>
-                        <div className="h-[20rem] sm:h-[22rem] md:h-full min-h-0 min-w-0 bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-3 p-2 sm:p-3 overflow-hidden">
+                        <div className="h-[15rem] sm:h-[16.5rem] md:h-full min-h-0 min-w-0 bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-[0.5625rem] p-1.5 sm:p-[0.5625rem] overflow-hidden">
                             <div className="h-full min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded w-full">
                                 <SummaryChart weeklyData={weeklyData}/>
                             </div>

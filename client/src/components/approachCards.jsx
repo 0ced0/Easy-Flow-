@@ -52,17 +52,17 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
                     <div key={card.label} style={{left: point.x, top: point.y, pointerEvents: 'auto'}} className="absolute -translate-x-1/2 -translate-y-1/2">
                         <div className="card grid grid-cols-2">
                             <div>
-                                <p className="mb-[0.38rem] font-medium">{card.label}</p>
-                                <p className="text-[0.4rem] text-[#A9A9A9] font-medium">{card.data?.vehicleFlow ?? 0}vh/hr</p>
-                                <p className="text-[0.5rem]">Timer:</p>
-                                <p className={`text-[0.4rem] font-medium ${statusColors[condition] ?? 'text-[#363636]'}`}>{condition}</p>
+                                <p className="mb-[0.285rem] font-medium">{card.label}</p>
+                                <p className="text-[0.3rem] text-[#A9A9A9] font-medium">{card.data?.vehicleFlow ?? 0}vh/hr</p>
+                                <p className="text-[0.375rem]">Timer:</p>
+                                <p className={`text-[0.3rem] font-medium ${statusColors[condition] ?? 'text-[#363636]'}`}>{condition}</p>
                             </div>
                             <div className="text-end">
-                                <svg className="size-3 ml-auto" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <svg className="size-[0.5625rem] ml-auto" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <circle cx="12" cy="12" r="11" fill={lightColor} />
                                 </svg>
-                                <p className="pr-1 text-[0.4rem] text-[#A9A9A9] font-medium mt-[1.15rem]">{card.data?.density ?? 0}vh/km</p>
-                                <p className="pr-1 font-bold">{timer}</p>
+                                <p className="pr-[0.1875rem] text-[0.3rem] text-[#A9A9A9] font-medium mt-[0.8625rem]">{card.data?.density ?? 0}vh/km</p>
+                                <p className="pr-[0.1875rem] font-bold">{timer}</p>
                             </div>
                         </div>
                     </div>

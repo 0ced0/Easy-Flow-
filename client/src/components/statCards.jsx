@@ -88,14 +88,14 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
 
     // console.log(currentData)
     return (
-        <div className="min-h-[24rem] sm:min-h-[220px] lg:min-h-0 h-full min-w-0 relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
+        <div className="min-h-[18rem] sm:min-h-[165px] lg:min-h-0 h-full min-w-0 relative shadow-[0_1px_4px_1px_rgba(0,0,0,0.25)] text-center flex-1 w-full">
 
             {/* Background */}
             <div className="absolute z-10 inset-0 bg-[#0000FF] opacity-[10%]"></div>
 
-            <div className="h-[100%] min-h-0 gap-2 z-20 absolute flex flex-col sm:flex-row p-1 inset-0">
-                <div className="chart relative min-h-64 sm:min-h-0 lg:min-h-0 w-full sm:w-auto min-w-0">
-                <div className="flex flex-wrap items-center border-b border-[#D9D9D9] font-medium text-sm sm:text-base text-start mb-2 px-1 sm:px-2 py-0.5">
+            <div className="h-[100%] min-h-0 gap-1.5 z-20 absolute flex flex-col sm:flex-row p-[0.1875rem] inset-0">
+                <div className="chart relative min-h-48 sm:min-h-0 lg:min-h-0 w-full sm:w-auto min-w-0">
+                <div className="flex flex-wrap items-center border-b border-[#D9D9D9] font-medium text-[0.75rem] sm:text-[0.75rem] text-start mb-1.5 px-[0.1875rem] sm:px-1.5 py-[0.125rem]">
                     <button ref={dateButtonRef} onClick={() => {setShowDateDropDown(prev => !prev)}} className="text-[#363636] hover:bg-black/10 py-1 px-2 min-h-11 sm:min-h-0">
                         Date
                     </button>
@@ -117,16 +117,16 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
                     )}
                 </div>
                 
-                    <p className="text-sm sm:text-base font-medium text-black/70">{currentApproach}</p>
+                    <p className="text-[0.75rem] sm:text-[0.75rem] font-medium text-black/70">{currentApproach}</p>
                 
                     {currentData ? 
                         <LineChart
                             responsive
                             data={currentData}
-                            style={{ width: "100%", minHeight: 170, height: "80%", padding: "0.2rem" }}
+                            style={{ width: "100%", minHeight: 127.5, height: "80%", padding: "0.15rem" }}
                             margin={{
-                                top: 10,
-                                right: 15,
+                                top: 7.5,
+                                right: 11.25,
                                 left: 0,
                                 bottom: 0
                             }}
@@ -135,29 +135,29 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
                                 vertical={false}
                                 strokeOpacity="0.4"
                             />
-                            <XAxis dataKey="hour" tick={{ fontSize: 5 }} strokeDasharray='0 10' />
-                            <YAxis width={20} tick={{ fontSize: 5 }} strokeDasharray='0 10' />
+                            <XAxis dataKey="hour" tick={{ fontSize: 3.75 }} strokeDasharray='0 7.5' />
+                            <YAxis width={15} tick={{ fontSize: 3.75 }} strokeDasharray='0 7.5' />
 
                             <Line dataKey="average_flow" stroke='blue' dot={false} />
 
                         </LineChart> 
                         :
-                        <p className="text-center pt-18">No Data Available</p>}
+                        <p className="text-center pt-[3.375rem] text-[0.75rem]">No Data Available</p>}
                     
                 </div>
 
 
                 {/* Stat Numbers */}
-                <div className="relative flex flex-row min-h-24 sm:min-h-0 lg:min-h-0 sm:flex-col justify-between gap-3 sm:gap-2 w-full sm:w-[6rem]">
+                <div className="relative flex flex-row min-h-18 sm:min-h-0 lg:min-h-0 sm:flex-col justify-between gap-[0.5625rem] sm:gap-1.5 w-full sm:w-[4.5rem]">
 
-                    <div className="counter h-full min-h-20 sm:min-h-0 flex-1 sm:flex-none text-sm">
-                        <p className="text-xs sm:text-sm">Vehicle Count</p>
-                        <h2 className="text-lg sm:text-xl font-medium">{vehicleNumbers}</h2>
+                    <div className="counter h-full min-h-15 sm:min-h-0 flex-1 sm:flex-none text-[0.75rem]">
+                        <p className="text-[0.4625rem] sm:text-[0.65rem]">Vehicle Count</p>
+                        <h2 className="text-[0.9rem] sm:text-[0.8375rem] font-medium">{vehicleNumbers}</h2>
                     </div>
-                    <div className="counter h-full min-h-20 sm:min-h-0 flex-1 sm:flex-none text-sm">
-                        <p className="text-xs sm:text-sm">Average speed</p>
-                        <h2 className="text-lg sm:text-xl font-medium">{averageVehicleSpeed}</h2>
-                        <h4 className="text-xs sm:text-sm">km/h</h4>
+                    <div className="counter h-full min-h-15 sm:min-h-0 flex-1 sm:flex-none text-[0.75rem]">
+                        <p className="text-[0.4625rem] sm:text-[0.65rem]">Average speed</p>
+                        <h2 className="text-[0.9rem] sm:text-[0.8375rem] font-medium">{averageVehicleSpeed}</h2>
+                        <h4 className="text-[0.4625rem] sm:text-[0.65rem]">km/h</h4>
                     </div>
                 </div>
             </div>

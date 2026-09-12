@@ -22,14 +22,14 @@
 
 /* VIOLATION MONITORING STYLES */
 .vmVehicle {
-    font-size: 15px;
+    font-size: 11.25px;
     color: rgb(70, 70, 70);
     font-weight: 400;
     /* border: 1px solid black; */
 }
 
 .vmNp {
-    font-size: 16px;
+    font-size: 12px;
     color: rgb(70, 70, 70);
     opacity: 0.8;
     font-weight: 300;
@@ -37,7 +37,7 @@
 }
 
 .vmViolation {
-    font-size: 15px;
+    font-size: 11.25px;
     color: rgb(70, 70, 70);
     font-weight: 700;
     /* border: 1px solid black; */
@@ -47,10 +47,10 @@
     border-top: 1px solid rgb(200, 200, 200);
     border-bottom: 1px solid rgb(200, 200, 200);
 
-    padding-right:0.5vh;
-    padding-left: 1vh;
-    padding-top: 1vh;
-    padding-bottom: 1vh;
+    padding-right: 0.375vh;
+    padding-left: 0.75vh;
+    padding-top: 0.75vh;
+    padding-bottom: 0.75vh;
     display: flex;
     /* grid-template-columns: 10px 100px 150px 250px;  */
     justify-content: space-between;
@@ -96,7 +96,7 @@
 
 /* VIOLATION DATA DISPLAY STYLES */
 .VDDLabel {
-    font-size: 0.7rem;
+    font-size: 0.525rem;
 }
 
 
@@ -106,14 +106,14 @@
 .chart {
     background-color: white;
     flex: auto;
-    padding-bottom: 35px;
+    padding-bottom: 26.25px;
     box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25)
 }
 
 .counter {
     background-color: white;
-    padding-block: 10px;
-    padding-inline: 8px;
+    padding-block: 7.5px;
+    padding-inline: 6px;
     height: 47%;
     position: relative;
     box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25)
@@ -141,12 +141,12 @@
 .summaryHeader {
     color: #363636;
     opacity: 70%;
-    font-size: 0.7rem;
+    font-size: 0.525rem;
 }
 
 .summaryContent {
     color: #363636;
-    font-size: 0.6rem;
+    font-size: 0.45rem;
     font-weight: 700;
 }
 
@@ -156,16 +156,16 @@
 
 /* APPROACH CARD STYLES */
 .card {
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    padding-right: 0.3rem;
-    padding-left: 0.3rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    padding-right: 0.225rem;
+    padding-left: 0.225rem;
     background-color: white;
-    width: 5.5rem;
-    height: 4.5rem;
+    width: 4.125rem;
+    height: 3.375rem;
     box-shadow: 0px 1px 4px 1px rgba(0,0,0,0.25);
     text-align: start;
-    font-size: 0.5rem;
+    font-size: 0.375rem;
     color: #363636;
 }
 
@@ -174,5 +174,5 @@
 .sideBarIcons {
     margin-left: auto;
     margin-right: auto;
-    padding: 2px;
+    padding: 1.5px;
 }

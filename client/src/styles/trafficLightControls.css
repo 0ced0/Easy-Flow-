@@ -1,11 +1,11 @@
 .boxInternalLabels {
     text-align: center;
-    font-size: 18px;
+    font-size: 13.5px;
     font-weight: 500;
 }
 
 .boxExternalLabels {
-    font-size: 1rem;
+    font-size: 0.75rem;
     justify-content: center;
     font-weight: 700;
 }
@@ -16,14 +16,18 @@ h3 {
 
 .roads {
     color: #4D4D4D;
-    font-size: 0.7rem;
+    font-size: 0.625rem;
+    min-height: 1.5rem;
+    display: flex;
+    align-items: center;
 }
 
 .tlcInput {
     background: #f7f8fa;
     border: 1px solid #d5d9df;
-    border-radius: 5px;
-    width: 4rem;
+    border-radius: 3.75px;
+    width: 3rem;
+    height: 1.5rem;
     text-align: center;
     color: grey;
 }
@@ -48,12 +52,21 @@ h3 {
 }
 
 .sideBarOptions {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    font-size: 0.8rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
 
-    border-radius: 15px;
+    border-radius: 11.25px;
+}
+
+.controlWorkspace .gap-7 {
+    gap: 1.3125rem;
+}
+
+.controlWorkspace .gap-3 > h1 {
+    margin-bottom: 0.3rem;
 }
 
 .sideBarOptions:hover {

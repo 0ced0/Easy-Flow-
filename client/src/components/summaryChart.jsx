@@ -3,13 +3,13 @@ import {Tooltip, Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid} from 're
 export default function SummaryChart ({weeklyData}) {
     try{
     return (
-        <div className="h-full min-h-0 flex flex-col gap-3 sm:gap-5 py-3 px-2 sm:px-5">
-            <h1 className="shrink-0 text-lg sm:text-[1.5rem] text-black/70">
+        <div className="h-full min-h-0 flex flex-col gap-[0.5625rem] sm:gap-[0.9375rem] py-[0.5625rem] px-[0.375rem] sm:px-[0.9375rem]">
+            <h1 className="shrink-0 text-[0.75rem] sm:text-[1.125rem] text-black/70">
                 Weekly Flow and Density Chart
             </h1>
 
             <ComposedChart
-            className="flex-1 min-h-0 w-full pb-2 md:pb-0"
+            className="flex-1 min-h-0 w-full pb-1.5 md:pb-0"
                 responsive
                 data={weeklyData}
                 style={{
@@ -25,14 +25,14 @@ export default function SummaryChart ({weeklyData}) {
 
                 <XAxis
                     dataKey="weekNumber"
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 7.5 }}
                     tickLine={false}
                     axisLine={false}
                 />
 
                 <YAxis
-                    width={35}
-                    tick={{ fontSize: 10 }}
+                    width={26.25}
+                    tick={{ fontSize: 7.5 }}
                     tickLine={false}
                     axisLine={false}
                 />
@@ -40,10 +40,10 @@ export default function SummaryChart ({weeklyData}) {
                 <Tooltip
                     cursor={false}
                     contentStyle={{
-                        borderRadius: "8px",
+                        borderRadius: "6px",
                         border: "none",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-                        fontSize: "12px"
+                        boxShadow: "0 1.5px 7.5px rgba(0,0,0,0.15)",
+                        fontSize: "9px"
                     }}
                     labelFormatter={(week) => `Week ${week}`}
                     formatter={(value, name) => {
@@ -64,8 +64,8 @@ export default function SummaryChart ({weeklyData}) {
                     dataKey="averageDensity"
                     name="Density"
                     className="fill-blue-500/30"
-                    barSize={18}
-                    radius={[3, 3, 0, 0]}
+                    barSize={13.5}
+                    radius={[2.25, 2.25, 0, 0]}
                     activeBar={{
                         fillOpacity: 0.6
                     }}
@@ -76,11 +76,11 @@ export default function SummaryChart ({weeklyData}) {
                     dataKey="averageFlow"
                     name="Flow"
                     className="stroke-blue-600"
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     dot={false}
                     activeDot={{
-                        r: 5,
-                        strokeWidth: 2
+                        r: 3.75,
+                        strokeWidth: 1.5
                     }}
                 />
             </ComposedChart>

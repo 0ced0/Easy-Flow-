@@ -157,19 +157,19 @@ export default function TrafficLightControls({
         return(
             <div className="popUpRoot flex-1 h-full min-h-0 min-w-0 flex">
                 <div className="popUpBackground "></div>
-                <div className="popUpContainerTLC w-[96vw] md:w-[75vw] h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
-                    <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-end gap-3 justify-between py-3 px-4 md:pl-20 md:pr-30 w-full border-[#D9D9D9]">
-                        <h1 className="font-bold text-xl sm:text-[1.5rem] opacity-[80%]">Traffic Controls Configuration</h1>
+                <div className="popUpContainerTLC w-[72vw] md:w-[75vw] h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
+                    <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-end gap-[0.5625rem] justify-between py-[0.5625rem] px-[0.75rem] md:pl-15 md:pr-[3.25rem] w-full border-[#D9D9D9]">
+                        <h1 className="font-bold text-[0.9375rem] sm:text-[1.125rem] opacity-[80%]">Traffic Controls Configuration</h1>
                         <button onClick={() => {
                             const saveConfig = () =>{
                                 handleSave()
                             }
                             saveConfig()
-                            }} className="bg-white px-5 py-2 rounded shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] hover:bg-blue-700/20">Save Configuration</button>
+                            }} className="bg-white px-[0.9375rem] py-[0.375rem] text-[0.75rem] rounded shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] hover:bg-blue-700/20">Save Configuration</button>
                     </div>
 
-                    <div className="rounded py-4 md:py-8 flex flex-col md:flex-row bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] w-[92vw] md:w-[60vw] flex-1 min-h-0 min-w-0 mx-auto overflow-hidden">
-                        <div className="border-b md:border-b-0 md:border-r border-black/10 flex flex-row md:flex-col flex-1 min-h-0 min-w-0 gap-2 md:gap-0 px-3 md:pl-5 pt-3 md:pt-5 pb-3 md:pb-0 md:space-y-10 overflow-x-auto">
+                    <div className="controlWorkspace rounded py-3 md:py-6 flex flex-col md:flex-row bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] w-[69vw] md:w-[68vw] flex-1 min-h-0 min-w-0 mx-auto md:ml-15 md:mr-0 overflow-hidden">
+                        <div className="border-b md:border-b-0 md:border-r border-black/10 flex flex-row md:flex-col flex-1 min-h-0 min-w-0 gap-1.5 md:gap-0 px-[0.5625rem] md:pl-[0.9375rem] pt-[0.5625rem] md:pt-[0.9375rem] pb-[0.5625rem] md:pb-0 md:space-y-[1.875rem] overflow-x-auto">
                             <button className="sideBarOptions" onClick={() => {setOption(0)}}>
                                 <p>Signal Timers</p>
                             </button>
@@ -181,14 +181,14 @@ export default function TrafficLightControls({
                             <p>Density Thresholds</p>
                             </button>
                         </div>
-                        <div className="flex-4 flex flex-col min-h-0 px-2 sm:px-5 min-w-0">
-                            <div className="border-b border-black/10 shrink-0 flex py-2 px-2 sm:px-5 text-xl sm:text-[1.5rem] font-medium text-black/60 items-center">
+                        <div className="flex-4 flex flex-col min-h-0 px-1.5 sm:px-[0.9375rem] min-w-0">
+                            <div className="border-b border-black/10 shrink-0 flex py-1.5 px-1.5 sm:px-[0.9375rem] text-[0.9375rem] sm:text-[1.125rem] font-medium text-black/60 items-center">
                                 {optionTitles[option]}
                             </div>
                             <div className="flex-1 min-h-0 flex">
                                 {/* INPUTS CONTAINER */}
                                 {option === 2 ? (
-                                <div className="gap-4 flex flex-col px-3 sm:px-10 py-5 flex-1 min-h-0 w-full overflow-y-auto">
+                                <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                     {/* MAXIMUM FREE FLOW THRESHOLDS */}
                                     <h1 className="font-medium text-black/60">Maximum Free Flow Thresholds</h1>
                                     <div className="flex w-full justify-between">
@@ -223,7 +223,7 @@ export default function TrafficLightControls({
                                     </div>
                                 </div>
                                 ) : option === 1 ? (
-                                <div className="gap-4 flex flex-col px-3 sm:px-10 py-5 flex-1 min-h-0 w-full overflow-y-auto">
+                                <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                     {/* MAXIMUM FREE FLOW THRESHOLDS */}
                                     <h1 className="font-medium text-black/60">Maximum Free Flow Thresholds</h1>
                                     <div className="flex w-full justify-between">
@@ -258,7 +258,7 @@ export default function TrafficLightControls({
                                     </div>
                                 </div>
                                 ) : option === 0 ? (
-                                <div className="gap-4 flex flex-col px-3 sm:px-10 py-5 flex-1 min-h-0 w-full overflow-y-auto">
+                                <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                 {/* MAXIMUM FREE FLOW THRESHOLDS */}
                                     <h1 className="font-medium text-black/60">Free Flow</h1>
                                     <div className="flex w-full justify-between">
