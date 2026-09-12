@@ -24,35 +24,24 @@ import base64
 # - right_turn_flow
 
 
-# BUG LIST TO FIX
-
-# WHENEVER THE FRONTEND RESTARTS AND CALLS THE UPDATEFRONTEND FUNCTION, REGARDLESS OF TIME, IT ADDS ANOTHER ITEM TO THE CHARTDATA LIST 
-# WHICH RUINS THE CHART IN THE FRONTEND, NEED TO MAKE THE CHARTDATA INDEPENDENT AND USE REAL TIMER
-
 base_dir = Path(__file__).resolve().parent
 modelPath = Path(base_dir/"../models/training/yoloModels/sModels/trainingBatch2/best.pt")
 byteTrack = Path(base_dir/"../models/training/bytetrack.yaml")
 capLock = threading.Lock()
 
-# Parking-only violation detection.
-# The loading/unloading proxy is intentionally disabled because the current
-# vehicle-only model cannot reliably distinguish a short legal/traffic stop
-# from actual loading/unloading activity.
+# Violation state is evaluated independently from the 30-second reporting
+# interval. A short cadence lets us reject queue movement and tracker gaps.
 VIOLATION_CHECK_INTERVAL = 1.0
-
-# Road-point movement tolerance in the 50%-resized inference frame.
-# This is only meant to absorb YOLO/ByteTrack box jitter.
+VIOLATION_CONFIDENCE_THRESHOLD = 0.55
 STATIONARY_DISTANCE_THRESHOLD = 12
-
-# Require several consecutive stationary checks before starting the timer.
 STATIONARY_CONFIRM_CHECKS = 3
-
-# A vehicle must remain continuously stationary inside the violation ROI
-# for this long before one illegal-parking record is created.
 ILLEGAL_PARKING_MIN_SECONDS = 120
+VIOLATION_TRACK_TIMEOUT_SECONDS = 1.5
+MAX_TRACK_OBSERVATION_GAP_SECONDS = 1.0
+MIN_TRACK_OBSERVATIONS = 15
+MOVING_PEER_DISTANCE_THRESHOLD = 20
+MIN_MOVING_PEERS = 2
 
-# Lost/occluded tracks are discarded rather than treated as violations.
-VIOLATION_TRACK_TIMEOUT_SECONDS = 5
 
 # FOR VIDEO TESTING
 base_dir = Path(__file__).resolve().parent
@@ -85,6 +74,7 @@ class ComputerVisionComponent:
         self.illegalLoadingUnloadingList = {}
         self.violationTracks = {}
         self.violationTracksLock = threading.Lock()
+        self.signalState = "unknown"
 
     def encodeFrame(self, frame):
         success, buffer = cv2.imencode(
@@ -108,261 +98,161 @@ class ComputerVisionComponent:
         flow = (vehicleCount/timeInterval) * 3600
         return flow
 
-    def updateViolationTrack(
-        self,
-        trackId,
-        vehicleName,
-        bbox,
-        vehicleCenter,
-        roadPoint,
-        violationDetectionArea
-    ):
-        contour = np.asarray(
-            violationDetectionArea,
-            dtype=np.int32
-        ).reshape((-1, 1, 2))
+    def setSignalState(self, signalState):
+        signalState = (signalState or "unknown").lower()
+        with self.violationTracksLock:
+            self.signalState = signalState
 
-        insideViolationArea = (
-            cv2.pointPolygonTest(contour, roadPoint, False) >= 0
-        )
-
+    def updateViolationTrack(self, trackId, vehicleName, bbox, roadPoint,
+                             confidence, violationDetectionArea):
+        contour = np.asarray(violationDetectionArea, dtype=np.int32).reshape((-1, 1, 2))
+        insideViolationArea = cv2.pointPolygonTest(contour, roadPoint, False) >= 0
         now = time.perf_counter()
 
         with self.violationTracksLock:
             track = self.violationTracks.get(trackId)
-
             if track is None:
                 self.violationTracks[trackId] = {
-                    "trackId": trackId,
-                    "vehicleName": vehicleName,
-                    "bbox": bbox,
-                    "center": vehicleCenter,
-                    "roadPoint": roadPoint,
-                    "lastSeen": now,
-
-                    "insideViolationArea": insideViolationArea,
-                    "wasInsideViolationArea": False,
-
-                    # Position used by the once-per-second violation loop.
-                    "lastCheckRoadPoint": None,
-
-                    # Continuous stop-event state.
-                    "anchorPosition": None,
-                    "stationaryChecks": 0,
-                    "stationarySince": None,
-
-                    # Prevent repeated inserts for one continuous stop.
+                    "trackId": trackId, "vehicleName": vehicleName, "bbox": bbox,
+                    "roadPoint": roadPoint, "lastSeen": now, "observations": 1,
+                    "trustedObservations": 1 if confidence >= VIOLATION_CONFIDENCE_THRESHOLD else 0,
+                    "confidence": confidence, "insideViolationArea": insideViolationArea,
+                    "lastCheckRoadPoint": None, "anchorPosition": None,
+                    "stationaryChecks": 0, "stationarySince": None,
+                    "eligibleSeconds": 0.0, "lastEligibleAt": None,
                     "parkingRecorded": False,
                 }
                 return
 
+            observationGap = now - track["lastSeen"]
+            trustedObservations = (
+                track["trustedObservations"] + 1
+                if confidence >= VIOLATION_CONFIDENCE_THRESHOLD
+                else 0
+            )
             track.update({
-                "vehicleName": vehicleName,
-                "bbox": bbox,
-                "center": vehicleCenter,
-                "roadPoint": roadPoint,
-                "lastSeen": now,
+                "vehicleName": vehicleName, "bbox": bbox, "roadPoint": roadPoint,
+                "lastSeen": now, "observations": track["observations"] + 1,
+                "trustedObservations": trustedObservations, "confidence": confidence,
                 "insideViolationArea": insideViolationArea,
             })
+            if observationGap > MAX_TRACK_OBSERVATION_GAP_SECONDS:
+                self.resetStopEvent(track, roadPoint)
 
     def captureViolationEvidence(self, bbox):
         if self.frame is None:
             return None
-
         x1, y1, x2, y2 = bbox
         evidenceFrame = self.frame.copy()
         cv2.rectangle(evidenceFrame, (x1, y1), (x2, y2), (0, 0, 255), 2)
         return self.encodeFrame(evidenceFrame)
 
     def resetStopEvent(self, track, anchorPosition=None):
-        track.update({
-            "anchorPosition": anchorPosition,
-            "stationaryChecks": 0,
-            "stationarySince": None,
-            "parkingRecorded": False,
-        })
+        track.update({"anchorPosition": anchorPosition, "stationaryChecks": 0,
+                      "stationarySince": None, "eligibleSeconds": 0.0,
+                      "lastEligibleAt": None, "parkingRecorded": False})
 
     def updateViolationStates(self):
-        """
-        Parking-only violation detector.
+        """Record only a continuous, high-confidence stop while this approach is green.
 
-        A violation is recorded only when:
-          1. the ByteTrack vehicle is inside the configured violation ROI;
-          2. it remains continuously within the stationary movement tolerance;
-          3. the stationary condition survives several consecutive checks;
-          4. the continuous stop lasts ILLEGAL_PARKING_MIN_SECONDS.
-
-        Any meaningful movement or ROI exit resets the stop event.
-
-        Illegal loading/unloading is deliberately disabled.
+        Only green time while other vehicles are discharging counts toward a
+        violation. Red/yellow/unknown phases pause that timer, so a legal queue
+        cannot earn violation time. Any tracker gap, weak detection, movement,
+        or ROI exit resets the continuous-stop event.
         """
         now = time.perf_counter()
         pendingViolations = []
 
         with self.violationTracksLock:
-            # ----------------------------------------------------------
-            # Remove stale tracks.
-            # Disappearing IDs/occlusions never create a violation.
-            # ----------------------------------------------------------
-            staleTrackIds = [
-                trackId
-                for trackId, track in self.violationTracks.items()
-                if (
-                    now - track["lastSeen"]
-                    > VIOLATION_TRACK_TIMEOUT_SECONDS
-                )
-            ]
-
+            staleTrackIds = [trackId for trackId, track in self.violationTracks.items()
+                             if now - track["lastSeen"] > VIOLATION_TRACK_TIMEOUT_SECONDS]
             for trackId in staleTrackIds:
                 del self.violationTracks[trackId]
 
-            for track in self.violationTracks.values():
+            if self.signalState != "green":
+                for track in self.violationTracks.values():
+                    previousPoint = track["lastCheckRoadPoint"]
+                    if (previousPoint is not None and math.dist(
+                            track["roadPoint"], previousPoint
+                    ) > STATIONARY_DISTANCE_THRESHOLD):
+                        self.resetStopEvent(track, track["roadPoint"])
+                    elif track["anchorPosition"] is None:
+                        track["anchorPosition"] = track["roadPoint"]
+                    track["lastCheckRoadPoint"] = track["roadPoint"]
+                    track["stationaryChecks"] = 0
+                    track["stationarySince"] = None
+                    track["lastEligibleAt"] = None
+                return
 
-                # ------------------------------------------------------
-                # OUTSIDE ROI
-                # ------------------------------------------------------
-                if not track["insideViolationArea"]:
-                    track["wasInsideViolationArea"] = False
-                    track["lastCheckRoadPoint"] = None
+            movements = {}
+            for trackId, track in self.violationTracks.items():
+                previousPoint = track["lastCheckRoadPoint"]
+                movements[trackId] = (math.dist(track["roadPoint"], previousPoint)
+                                      if previousPoint is not None else None)
+
+            movingPeers = sum(1 for movement in movements.values()
+                              if movement is not None and movement > MOVING_PEER_DISTANCE_THRESHOLD)
+
+            for trackId, track in self.violationTracks.items():
+                movement = movements[trackId]
+                track["lastCheckRoadPoint"] = track["roadPoint"]
+
+                trusted = (track["confidence"] >= VIOLATION_CONFIDENCE_THRESHOLD
+                           and track["trustedObservations"] >= MIN_TRACK_OBSERVATIONS)
+                if (not trusted or not track["insideViolationArea"] or movement is None):
                     self.resetStopEvent(track)
                     continue
 
-                # ------------------------------------------------------
-                # JUST ENTERED ROI
-                # ------------------------------------------------------
-                if not track["wasInsideViolationArea"]:
-                    track["wasInsideViolationArea"] = True
-                    track["lastCheckRoadPoint"] = track["roadPoint"]
-                    self.resetStopEvent(
-                        track,
-                        track["roadPoint"]
-                    )
+                if movement > STATIONARY_DISTANCE_THRESHOLD:
+                    self.resetStopEvent(track, track["roadPoint"])
                     continue
 
-                previousPoint = track["lastCheckRoadPoint"]
-
-                if previousPoint is None:
-                    track["lastCheckRoadPoint"] = track["roadPoint"]
-                    continue
-
-                intervalMovement = math.dist(
-                    track["roadPoint"],
-                    previousPoint
-                )
-
-                # Store this sample for the next violation-loop iteration.
-                track["lastCheckRoadPoint"] = track["roadPoint"]
-
-                # ------------------------------------------------------
-                # VEHICLE MOVED
-                # ------------------------------------------------------
-                # Any movement beyond the jitter tolerance ends the old
-                # stop event completely. A later stop starts from zero.
-                if (
-                    intervalMovement
-                    > STATIONARY_DISTANCE_THRESHOLD
-                ):
-                    self.resetStopEvent(
-                        track,
-                        track["roadPoint"]
-                    )
-                    continue
-
-                # ------------------------------------------------------
-                # VEHICLE APPEARS STATIONARY
-                # ------------------------------------------------------
                 if track["anchorPosition"] is None:
                     track["anchorPosition"] = track["roadPoint"]
 
-                # Protect against slow creeping:
-                # even if each one-second step is small, cumulative
-                # displacement from the stop anchor must also remain small.
-                distanceFromAnchor = math.dist(
-                    track["roadPoint"],
-                    track["anchorPosition"]
-                )
-
-                if (
-                    distanceFromAnchor
-                    > STATIONARY_DISTANCE_THRESHOLD
-                ):
-                    self.resetStopEvent(
-                        track,
-                        track["roadPoint"]
-                    )
+                if math.dist(track["roadPoint"], track["anchorPosition"]) > STATIONARY_DISTANCE_THRESHOLD:
+                    self.resetStopEvent(track, track["roadPoint"])
                     continue
 
                 track["stationaryChecks"] += 1
-
-                # ------------------------------------------------------
-                # CONFIRM A REAL STOP BEFORE STARTING TIMER
-                # ------------------------------------------------------
                 if track["stationarySince"] is None:
-                    if (
-                        track["stationaryChecks"]
-                        < STATIONARY_CONFIRM_CHECKS
-                    ):
-                        continue
-
-                    track["stationarySince"] = now
+                    if track["stationaryChecks"] >= STATIONARY_CONFIRM_CHECKS:
+                        track["stationarySince"] = now
                     continue
 
-                stationaryDuration = (
-                    now - track["stationarySince"]
-                )
+                # A stopped vehicle earns time only while at least two peers
+                # move through the scene. This is the queue-discharge test.
+                if movingPeers < MIN_MOVING_PEERS:
+                    track["lastEligibleAt"] = None
+                    continue
 
-                # ------------------------------------------------------
-                # ILLEGAL PARKING
-                # ------------------------------------------------------
-                if (
-                    stationaryDuration
-                    >= ILLEGAL_PARKING_MIN_SECONDS
-                    and not track["parkingRecorded"]
-                ):
-                    evidence = self.captureViolationEvidence(
-                        track["bbox"]
-                    )
+                if track["lastEligibleAt"] is None:
+                    track["lastEligibleAt"] = now
+                    continue
 
+                track["eligibleSeconds"] += now - track["lastEligibleAt"]
+                track["lastEligibleAt"] = now
+
+                if (track["eligibleSeconds"] >= ILLEGAL_PARKING_MIN_SECONDS
+                        and not track["parkingRecorded"]):
+                    evidence = self.captureViolationEvidence(track["bbox"])
                     if evidence is not None:
-                        pendingViolations.append((
-                            track["trackId"],
-                            track["vehicleName"],
-                            2,
-                            evidence
-                        ))
-
-                        # Only one insert for the current continuous stop.
+                        pendingViolations.append((track["vehicleName"], evidence))
                         track["parkingRecorded"] = True
 
-        # Keep database work outside the tracking lock.
-        for (
-            trackId,
-            vehicleName,
-            violationType,
-            evidence
-        ) in pendingViolations:
-            violationData = {
-                "cameraId": self.cameraId,
-                "vehicle": vehicleName,
-                "violationType": violationType,
-                "timeStamp": datetime.now(
-                    ZoneInfo("Asia/Manila")
-                ).strftime("%I:%M %p"),
+        for vehicleName, evidence in pendingViolations:
+            databaseConnector.postViolationData({
+                "cameraId": self.cameraId, "vehicle": vehicleName,
+                "violationType": 2,
+                "timeStamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p"),
                 "frame": evidence,
-            }
-
-            databaseConnector.postViolationData(
-                violationData
-            )
+            })
 
     def illegalParkingDetection(self):
         self.updateViolationStates()
 
     def illegalLoadingUnloadingDetection(self):
-        # Intentionally disabled.
-        # The current model detects vehicles, not passenger/cargo activity,
-        # so a stationary short stop is not reliable evidence of actual
-        # loading/unloading.
+        # A vehicle-only model cannot establish loading/unloading activity.
         return
 
     def getTrafficMovement(self, allVehicles, violationList):
@@ -412,14 +302,14 @@ class ComputerVisionComponent:
             cx = (x1+x2) // 2
             cy = (y1+y2) // 2
             vehicleCenter = (cx,cy)
-            roadPoint = (int((x1 + x2) / 2), int(y2))
+            roadPoint = (cx, y2)
 
             self.updateViolationTrack(
                 currentVehicleId,
                 vehicleName,
                 (x1, y1, x2, y2),
-                vehicleCenter,
                 roadPoint,
+                float(box.conf[0]),
                 violationDetectionArea,
             )
 

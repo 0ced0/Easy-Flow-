@@ -68,6 +68,15 @@ class streamControl:
         self.lineFunction = lineFunction
         self.crossValidation = crossValidation
 
+    def currentApproachSignalState(self):
+        # Camera construction order follows the controller's A-D approach order.
+        approachByCamera = {1: "A", 2: "B", 3: "C", 4: "D"}
+        approach = approachByCamera.get(self.CV.cameraId)
+        for light in TLC.trafficLightData:
+            if len(light) >= 3 and light[2] == approach:
+                return light[0]
+        return "unknown"
+
     def capLoop(self):
 
         with self.capLock:
@@ -104,6 +113,7 @@ class streamControl:
             
     def violationMonitoringLoop(self):
         while self.running:
+            self.CV.setSignalState(self.currentApproachSignalState())
             self.CV.updateViolationStates()
             time.sleep(VIOLATION_CHECK_INTERVAL)
 
