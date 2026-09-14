@@ -1,14 +1,21 @@
 import mysql.connector
+import os
 from mysql.connector import Error
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import statistics
 
+dbUser = os.environ.get("DB_USER")
+dbPassword = os.environ.get("DB_PASSWORD")
+
+if not dbUser or not dbPassword:
+    raise RuntimeError("DB_USER and DB_PASSWORD environment variables must be set.")
+
 DB_CONFIG = {
-    "host" : "localhost",
-    "user" : "root",
-    "password" : "",
-    "database" : "easyflow",
+    "host" : os.environ.get("DB_HOST", "127.0.0.1"),
+    "user" : dbUser,
+    "password" : dbPassword,
+    "database" : os.environ.get("DB_NAME", "easyflow"),
     }
 
 def saveTrafficInterval(data: dict) -> bool:
