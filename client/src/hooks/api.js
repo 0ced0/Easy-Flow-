@@ -1,8 +1,10 @@
+import { BACKEND_BASE_URL } from '../config/backend.js'
+
 // SAMBAT TO PATIMBAO APIS
 
 export const getStopStatData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stop_get_stat_data')
+        return await fetch(`${BACKEND_BASE_URL}/stop_get_stat_data`)
     }catch(error){
         console.error(error)
     }
@@ -10,7 +12,7 @@ export const getStopStatData = async () => {
 
 export const stopUpdateFrontend = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stop_update_frontend')
+        return await fetch(`${BACKEND_BASE_URL}/stop_update_frontend`)
     }catch(error){
         console.error(error)
     }
@@ -22,7 +24,7 @@ export const stopUpdateFrontend = async () => {
 
 export const getStolStatData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stol_get_stat_data')
+        return await fetch(`${BACKEND_BASE_URL}/stol_get_stat_data`)
     }catch(error){
         console.error(error)
     }
@@ -30,7 +32,7 @@ export const getStolStatData = async () => {
 
 export const stolUpdateFrontend = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stol_update_frontend')
+        return await fetch(`${BACKEND_BASE_URL}/stol_update_frontend`)
     }catch(error){
         console.error(error)
     }
@@ -40,7 +42,7 @@ export const stolUpdateFrontend = async () => {
 // SAMBAT TO COMPLEX APIS
 export const getStocStatData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stoc_get_stat_data')
+        return await fetch(`${BACKEND_BASE_URL}/stoc_get_stat_data`)
     }catch(error){
         console.error(error)
     }
@@ -48,7 +50,7 @@ export const getStocStatData = async () => {
 
 export const stocUpdateFrontend = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stoc_update_frontend')
+        return await fetch(`${BACKEND_BASE_URL}/stoc_update_frontend`)
     }catch(error){
         console.error(error)
     }
@@ -60,7 +62,7 @@ export const stocUpdateFrontend = async () => {
 // SAMBAT TO SUNSTAR APIS
 export const getStosStatData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stos_get_stat_data')
+        return await fetch(`${BACKEND_BASE_URL}/stos_get_stat_data`)
     }catch(error){
         console.error(error)
     }
@@ -68,7 +70,7 @@ export const getStosStatData = async () => {
 
 export const stosUpdateFrontend = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/stos_update_frontend')
+        return await fetch(`${BACKEND_BASE_URL}/stos_update_frontend`)
     }catch(error){
         console.error(error)
     }
@@ -79,7 +81,7 @@ export const stosUpdateFrontend = async () => {
 // TRAFFIC FORECAST API
 export const getTrafficForecast = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/get_traffic_forecast')
+        return await fetch(`${BACKEND_BASE_URL}/get_traffic_forecast`)
     }
     catch(error){
         console.error(error)
@@ -92,7 +94,7 @@ export const getTrafficForecast = async () => {
 // DATA REQUEST HANDLER API
 export const getTrafficData = async (camera_id, dateFilter=null) => {
     try{
-        let url = `http://127.0.0.1:5000/get_hourly_data?camera_id=${camera_id}`
+        let url = `${BACKEND_BASE_URL}/get_hourly_data?camera_id=${camera_id}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }
@@ -104,7 +106,7 @@ export const getTrafficData = async (camera_id, dateFilter=null) => {
 
 export const getAllRows = async (camera_id=0, page=null, dateFilter=null) => {
     try{
-        let url = `http://127.0.0.1:5000/get_all_rows?camera_id=${camera_id}&page=${page}`
+        let url = `${BACKEND_BASE_URL}/get_all_rows?camera_id=${camera_id}&page=${page}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }
@@ -118,7 +120,7 @@ export const getAllRows = async (camera_id=0, page=null, dateFilter=null) => {
 export const getSummaryData = async (dateFilter=null) => {
     try{
 
-        let url = `http://127.0.0.1:5000/get_summary_data`
+        let url = `${BACKEND_BASE_URL}/get_summary_data`
         if (dateFilter !== null){
             url += `?dateFilter=${dateFilter}`
         }
@@ -133,7 +135,7 @@ export const getSummaryData = async (dateFilter=null) => {
 export const getDailyData = async (camera_id=0, page, dateFilter=null) => {
     try{
         // console.log(page)
-        return await fetch(`http://127.0.0.1:5000/get_daily_data?camera_id=${camera_id}&page=${page}&dateFilter=${dateFilter}`)
+        return await fetch(`${BACKEND_BASE_URL}/get_daily_data?camera_id=${camera_id}&page=${page}&dateFilter=${dateFilter}`)
     }catch(error){
         console.error
     }
@@ -141,7 +143,7 @@ export const getDailyData = async (camera_id=0, page, dateFilter=null) => {
 export const getMonthlyData = async (camera_id=0, dateFilter=null) => {
     try{
         // console.log(camera_id)
-        let url = `http://127.0.0.1:5000/get_monthly_data?camera_id=${camera_id}`
+        let url = `${BACKEND_BASE_URL}/get_monthly_data?camera_id=${camera_id}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }
@@ -154,7 +156,7 @@ export const getMonthlyData = async (camera_id=0, dateFilter=null) => {
 
 export const getWeeklyData = async (camera_id=0, dateFilter=null) => {
     try{
-        let url = `http://127.0.0.1:5000/get_weekly_data?camera_id=${camera_id}`
+        let url = `${BACKEND_BASE_URL}/get_weekly_data?camera_id=${camera_id}`
         if (dateFilter !== null){
             url += `&dateFilter=${dateFilter}`
         }
@@ -169,7 +171,7 @@ export const getWeeklyData = async (camera_id=0, dateFilter=null) => {
 // TRAFFIC LIGHT TIMERS CONFIG API
 export const postTrafficTimersConfig = async (timerConfiguration) => {
     try{
-        return await fetch('http://127.0.0.1:5000/update_traffic_light_config', {
+        return await fetch(`${BACKEND_BASE_URL}/update_traffic_light_config`, {
             method:'POST',
             headers: {"Content-Type": "application/json"},
             body:JSON.stringify({configs:timerConfiguration})
@@ -183,7 +185,7 @@ export const postTrafficTimersConfig = async (timerConfiguration) => {
 // GET TRAFFIC LIGHT DATA API
 export const getTrafficLightData = async () => {
     try{
-        return await fetch('http://127.0.0.1:5000/get_intersection_timers')
+        return await fetch(`${BACKEND_BASE_URL}/get_intersection_timers`)
     }catch(error){
         console.error(error)
     }
@@ -194,7 +196,7 @@ export const getTrafficLightData = async () => {
 // DENSITY CONFIG API
 export const postDensityConfig = async (densityConfiguration) => {
     try{
-        return await fetch('http://127.0.0.1:5000/update_density_config', {
+        return await fetch(`${BACKEND_BASE_URL}/update_density_config`, {
             method:'POST',
             headers: {"Content-Type": "application/json"},
             body:JSON.stringify({configs:densityConfiguration})
@@ -208,7 +210,7 @@ export const postDensityConfig = async (densityConfiguration) => {
 // GET DENSITY THRESHOLDS CONFIG API
 export const getDensityConfig = async () => {
     try{
-        return await fetch("http://127.0.0.1:5000/get_density_configuration")
+        return await fetch(`${BACKEND_BASE_URL}/get_density_configuration`)
     }catch(error){
         console.error(error)
     }
@@ -217,7 +219,7 @@ export const getDensityConfig = async () => {
 // FLOW THRESHOLD CONFIG API
 export const postFlowConfig = async (flowConfiguration) => {
     try{
-        return await fetch("http://127.0.0.1:5000/update_flow_config", {
+        return await fetch(`${BACKEND_BASE_URL}/update_flow_config`, {
             method:'POST',
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({configs: flowConfiguration})
@@ -231,7 +233,7 @@ export const postFlowConfig = async (flowConfiguration) => {
 // GET FLOW THRESHOLDS API
 export const getFlowConfig = async () => {
     try{
-        return await fetch("http://127.0.0.1:5000/get_flow_configuration")
+        return await fetch(`${BACKEND_BASE_URL}/get_flow_configuration`)
     }catch(error){
         console.error(error)
     }
@@ -241,7 +243,7 @@ export const getFlowConfig = async () => {
 // VIOLATION DATA API
 export const getViolationData = async () => {
     try{
-        return await fetch("http://127.0.0.1:5000/get_violation_data")
+        return await fetch(`${BACKEND_BASE_URL}/get_violation_data`)
     }catch(error){
         console.error(error)
     }
@@ -249,7 +251,7 @@ export const getViolationData = async () => {
 
 export const getAllViolationData = async () => {
     try{
-        return await fetch("http://127.0.0.1:5000/get_all_violation_data")
+        return await fetch(`${BACKEND_BASE_URL}/get_all_violation_data`)
     }catch(error){
         console.error(error)
     }
@@ -261,7 +263,7 @@ export const getPaginatedViolationData = async (page, search = '', violationType
         if (search.trim()) params.set('search', search.trim())
         if (violationType !== 'all') params.set('violation_type', violationType)
 
-        return await fetch(`http://127.0.0.1:5000/get_paginated_violation_data?${params}`)
+        return await fetch(`${BACKEND_BASE_URL}/get_paginated_violation_data?${params}`)
     }catch(error){
         console.error(error)
     }
