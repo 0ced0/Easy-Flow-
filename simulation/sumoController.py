@@ -8,6 +8,10 @@ class SumoController:
     def __init__(self):
         self.tlsId = "J0"
         self.started = False
+        self.enabled = os.environ.get("ENABLE_SUMO", "").strip().lower() not in {
+            "false", "disabled", "0", "no"
+        }
+        self.disabledMessagePrinted = False
 
         self.greenStates = {
             "D": "GGGrrrrrrrrr",
@@ -26,6 +30,12 @@ class SumoController:
         self.allRed = "rrrrrrrrrrrr"
 
     def start(self):
+        if not self.enabled:
+            if not self.disabledMessagePrinted:
+                print("SUMO integration disabled.")
+                self.disabledMessagePrinted = True
+            return
+
         sumoBinary = os.path.join(
             os.environ["SUMO_HOME"],
             "bin",
@@ -53,6 +63,9 @@ class SumoController:
 
     def setLight(self, approach, state):
 
+        if not self.enabled:
+            return
+
         if state == "green":
             signal = self.greenStates[approach]
 
@@ -71,11 +84,17 @@ class SumoController:
         )
 
     def step(self):
+        if not self.enabled:
+            return
+
         for _ in range(10):
             traci.simulationStep()
             time.sleep(0.1)
 
     def close(self):
+        if not self.enabled:
+            return
+
         if self.started:
             traci.close()
             self.started = False
