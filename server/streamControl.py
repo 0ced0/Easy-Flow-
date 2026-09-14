@@ -19,8 +19,8 @@ base_dir = Path(__file__).resolve().parent
 stream = Blueprint('stream', __name__)
 previousFrame = None
 
-cctvUsername = os.environ.get("CCTV_USERNAME")
-cctvPassword = os.environ.get("CCTV_PASSWORD")
+cctvUsername = os.environ.get("easyflow")
+cctvPassword = os.environ.get("3Musketeers")
 
 if not cctvUsername or not cctvPassword:
     raise RuntimeError(
