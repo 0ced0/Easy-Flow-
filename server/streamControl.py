@@ -19,20 +19,33 @@ base_dir = Path(__file__).resolve().parent
 stream = Blueprint('stream', __name__)
 previousFrame = None
 
-cctvUsername = os.environ.get("easyflow")
-cctvPassword = os.environ.get("3Musketeers")
+cctvEnvironmentNames = (
+    "STOL_CCTV_USERNAME", "STOL_CCTV_PASSWORD",
+    "STOP_CCTV_USERNAME", "STOP_CCTV_PASSWORD",
+    "STOS_CCTV_USERNAME", "STOS_CCTV_PASSWORD",
+    "STOC_CCTV_USERNAME", "STOC_CCTV_PASSWORD",
+)
+cctvEnvironment = {name: os.environ.get(name) for name in cctvEnvironmentNames}
+missingCctvEnvironmentNames = [
+    name for name, value in cctvEnvironment.items() if not value
+]
 
-if not cctvUsername or not cctvPassword:
+if missingCctvEnvironmentNames:
     raise RuntimeError(
-        "CCTV_USERNAME and CCTV_PASSWORD environment variables must be set."
+        "Missing required CCTV environment variables: "
+        + ", ".join(missingCctvEnvironmentNames)
     )
 
-cctvCredentials = f"{quote(cctvUsername, safe='')}:{quote(cctvPassword, safe='')}"
+def cctvCredentials(cameraPrefix):
+    return (
+        f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_USERNAME'], safe='')}:"
+        f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_PASSWORD'], safe='')}"
+    )
 
-stolVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18554/live"
-stopVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18555/live"
-stosVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18556/live"
-stocVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18557/live"
+stolVideoPath = f"rtsp://{cctvCredentials('STOL')}@127.0.0.1:18554/Streaming/Channels/101"
+stopVideoPath = f"rtsp://{cctvCredentials('STOP')}@127.0.0.1:18555/Streaming/Channels/101"
+stosVideoPath = f"rtsp://{cctvCredentials('STOS')}@127.0.0.1:18556/Streaming/Channels/101"
+stocVideoPath = f"rtsp://{cctvCredentials('STOC')}@127.0.0.1:18557/Streaming/Channels/101"
 
 # stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
 # stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
