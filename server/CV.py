@@ -7,6 +7,8 @@ from ultralytics import YOLO;
 import time
 from datetime import datetime
 from database import databaseConnector
+from parkingRois import isInsideParkingROI, parkingROIIndex
+from parkingEvents import ParkingEventManager
 from zoneinfo import ZoneInfo
 import math
 import statistics
@@ -75,6 +77,8 @@ class ComputerVisionComponent:
         self.violationTracks = {}
         self.violationTracksLock = threading.Lock()
         self.signalState = "unknown"
+        self.parkingEvents = ParkingEventManager(cameraId)
+        self.parkingEventsLock = threading.Lock()
 
     def encodeFrame(self, frame):
         success, buffer = cv2.imencode(
@@ -104,25 +108,33 @@ class ComputerVisionComponent:
             self.signalState = signalState
 
     def updateViolationTrack(self, trackId, vehicleName, bbox, roadPoint,
-                             confidence, violationDetectionArea):
-        contour = np.asarray(violationDetectionArea, dtype=np.int32).reshape((-1, 1, 2))
-        insideViolationArea = cv2.pointPolygonTest(contour, roadPoint, False) >= 0
+                             confidence, parkingViolationAreas):
+        insideParkingArea = isInsideParkingROI(
+            roadPoint, parkingViolationAreas
+        )
         now = time.perf_counter()
+        with self.parkingEventsLock:
+            self.parkingEvents.observe(trackId, vehicleName, bbox, roadPoint,
+                                       insideParkingArea,
+                                       parkingROIIndex(roadPoint, parkingViolationAreas), now)
+        return insideParkingArea
 
         with self.violationTracksLock:
             track = self.violationTracks.get(trackId)
             if track is None:
+                if not insideParkingArea:
+                    return False
                 self.violationTracks[trackId] = {
                     "trackId": trackId, "vehicleName": vehicleName, "bbox": bbox,
                     "roadPoint": roadPoint, "lastSeen": now, "observations": 1,
                     "trustedObservations": 1 if confidence >= VIOLATION_CONFIDENCE_THRESHOLD else 0,
-                    "confidence": confidence, "insideViolationArea": insideViolationArea,
+                    "confidence": confidence, "insideParkingArea": insideParkingArea,
                     "lastCheckRoadPoint": None, "anchorPosition": None,
                     "stationaryChecks": 0, "stationarySince": None,
                     "eligibleSeconds": 0.0, "lastEligibleAt": None,
                     "parkingRecorded": False,
                 }
-                return
+                return insideParkingArea
 
             observationGap = now - track["lastSeen"]
             trustedObservations = (
@@ -134,10 +146,11 @@ class ComputerVisionComponent:
                 "vehicleName": vehicleName, "bbox": bbox, "roadPoint": roadPoint,
                 "lastSeen": now, "observations": track["observations"] + 1,
                 "trustedObservations": trustedObservations, "confidence": confidence,
-                "insideViolationArea": insideViolationArea,
+                "insideParkingArea": insideParkingArea,
             })
             if observationGap > MAX_TRACK_OBSERVATION_GAP_SECONDS:
                 self.resetStopEvent(track, roadPoint)
+        return insideParkingArea
 
     def captureViolationEvidence(self, bbox):
         if self.frame is None:
@@ -161,6 +174,23 @@ class ComputerVisionComponent:
         or ROI exit resets the continuous-stop event.
         """
         now = time.perf_counter()
+        with self.parkingEventsLock:
+            self.parkingEvents.advance(now)
+            pendingEvents = self.parkingEvents.confirmationEvents()
+        for event in pendingEvents:
+            evidence = self.captureViolationEvidence(event["lastBBox"])
+            if evidence is None:
+                continue
+            with self.parkingEventsLock:
+                self.parkingEvents.markRecorded(event)
+            databaseConnector.postViolationData({
+                "cameraId": self.cameraId, "vehicle": event["vehicleClass"],
+                "violationType": 2,
+                "timeStamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%I:%M %p"),
+                "frame": evidence,
+            })
+        return
+
         pendingViolations = []
 
         with self.violationTracksLock:
@@ -199,7 +229,7 @@ class ComputerVisionComponent:
 
                 trusted = (track["confidence"] >= VIOLATION_CONFIDENCE_THRESHOLD
                            and track["trustedObservations"] >= MIN_TRACK_OBSERVATIONS)
-                if (not trusted or not track["insideViolationArea"] or movement is None):
+                if (not trusted or not track["insideParkingArea"] or movement is None):
                     self.resetStopEvent(track)
                     continue
 
@@ -251,6 +281,10 @@ class ComputerVisionComponent:
     def illegalParkingDetection(self):
         self.updateViolationStates()
 
+    def getParkingDebugSnapshot(self):
+        with self.parkingEventsLock:
+            return self.parkingEvents.snapshot()
+
     def illegalLoadingUnloadingDetection(self):
         # A vehicle-only model cannot establish loading/unloading activity.
         return
@@ -275,7 +309,16 @@ class ComputerVisionComponent:
         medianTrafficMovement = statistics.median(trafficMovement) if len(vehicleMovements) > 4 else None
         return medianTrafficMovement, vehicleMovements
     
-    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation, violationDetectionArea):
+    def drawParkingROIs(self, frame, parkingViolationAreas):
+        for index, parkingArea in enumerate(parkingViolationAreas, start=1):
+            contour = np.asarray(parkingArea, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.polylines(frame, [contour], True, (0, 165, 255), 2)
+            labelPoint = tuple(contour[0, 0])
+            cv2.putText(frame, f"PARKING ZONE {index}", labelPoint,
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 165, 255), 2,
+                        cv2.LINE_AA)
+
+    def displayVehicle(self, frame, boxes, countingLine, allVehicles, vehicleCount, startLine, endLine, frameCount, crossValidation, parkingViolationAreas, drawParkingROI):
         crossProductReference = "counterCrossProduct"
 
         # DISPLAYING ALL VEHICLES
@@ -304,14 +347,18 @@ class ComputerVisionComponent:
             vehicleCenter = (cx,cy)
             roadPoint = (cx, y2)
 
-            self.updateViolationTrack(
+            insideParkingArea = self.updateViolationTrack(
                 currentVehicleId,
                 vehicleName,
                 (x1, y1, x2, y2),
                 roadPoint,
                 float(box.conf[0]),
-                violationDetectionArea,
+                parkingViolationAreas,
             )
+
+            if drawParkingROI:
+                pointColor = (0, 255, 0) if insideParkingArea else (0, 0, 255)
+                cv2.circle(frame, roadPoint, 4, pointColor, -1)
 
             frame, crossProduct = self.trackVehicle(frame, vehicleCenter, countingLine)
 
@@ -491,18 +538,22 @@ class ComputerVisionComponent:
         self.allVehicles = {}
         self.intervalStart = datetime.now()
 
-    def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation, violationDetectionArea):
+    def inference(self, frame, newWidth, newHeight, countingLine, startLine, endLine, crossValidation, parkingViolationAreas, drawParkingROI=False):
         self.frameCount += 1
         self.frameTime = time.perf_counter()
         if self.frameCount % 1 == 0:
 
             frame = cv2.resize(frame,(newWidth, newHeight))
-            self.frame = frame
+            # Evidence is intentionally captured from this clean inference
+            # frame; captureViolationEvidence adds only the vehicle bbox.
+            self.frame = frame.copy()
+            if drawParkingROI:
+                self.drawParkingROIs(frame, parkingViolationAreas)
             results = self.model.track(frame, conf=0.4, persist=True, tracker=byteTrack, device=0, verbose=False)
             boxes = results[0].boxes
             
             if (boxes != None and len(boxes) > 0):
-                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation, violationDetectionArea)
+                frame, allVehicles, vehicleCount = self.displayVehicle(frame, boxes, countingLine, self.allVehicles, self.vehicleCount, startLine, endLine, self.frameCount, crossValidation, parkingViolationAreas, drawParkingROI)
 
                 with capLock:
                     self.vehicleCount = vehicleCount
@@ -514,6 +565,7 @@ class ComputerVisionComponent:
                     speed = self.allVehicles[vehicle]["speed"]
                     if speed != None:
                         speedList.append(speed)
+            return frame
 
     def speedEstimation(self, vehicle, startTime, endTime):
         msTOkmh = 3.6

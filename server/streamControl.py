@@ -3,11 +3,12 @@ from pathlib import Path;
 import cv2
 import threading 
 import time
-import numpy as np
 import os
 import atexit
+from urllib.parse import quote
 
 from CV import ComputerVisionComponent, VIOLATION_CHECK_INTERVAL;
+from parkingRois import PARKING_ROIS, parkingROIsForCamera;
 from trafficForecast import forecastingComponent;
 from trafficLightControl import TLC;
 from simulation.sumoController import SC;
@@ -18,15 +19,27 @@ base_dir = Path(__file__).resolve().parent
 stream = Blueprint('stream', __name__)
 previousFrame = None
 
-# stolVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.78/live"
-# stopVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.82/live"
-# stosVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.92/live"
-# stocVideoPath = "rtsp://admin:Stacruz@2022@172.1.5.77/live"
+cctvUsername = os.environ.get("CCTV_USERNAME")
+cctvPassword = os.environ.get("CCTV_PASSWORD")
 
-stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
-stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
-stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
-stocVideoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
+if not cctvUsername or not cctvPassword:
+    raise RuntimeError(
+        "CCTV_USERNAME and CCTV_PASSWORD environment variables must be set."
+    )
+
+cctvCredentials = f"{quote(cctvUsername, safe='')}:{quote(cctvPassword, safe='')}"
+
+stolVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18554/live"
+stopVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18555/live"
+stosVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18556/live"
+stocVideoPath = f"rtsp://{cctvCredentials}@127.0.0.1:18557/live"
+
+# stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
+# stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
+# stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
+# stocVideoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
+
+DRAW_PARKING_ROI = False
 
 # DEBUG ERROR LIST
 # 
@@ -51,6 +64,7 @@ class streamControl:
         self.cap = cv2.VideoCapture(videoPath)
         self.videoPath = videoPath
         self.frame = None
+        self.processedFrame = None
         self.frameCount = 0
         self.previousFrame = None
 
@@ -132,9 +146,18 @@ class streamControl:
             continue
         
         # print("cv loop running!")
-        newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea = self.lineFunction(frame)
+        newWidth, newHeight, countingLine, startLine, endLine = self.lineFunction(frame)
+        parkingViolationAreas = parkingROIsForCamera(
+            self.CV.cameraId, newWidth, newHeight
+        )
 
-        response = self.CV.inference(frame, newWidth, newHeight, countingLine, startLine, endLine, self.crossValidation, violationDetectionArea)
+        processedFrame = self.CV.inference(
+            frame, newWidth, newHeight, countingLine, startLine, endLine,
+            self.crossValidation, parkingViolationAreas, DRAW_PARKING_ROI,
+        )
+        if processedFrame is not None:
+            with self.frameLock:
+                self.processedFrame = processedFrame
     
         
         time.sleep(0.01)
@@ -180,7 +203,8 @@ class streamControl:
         while True:
 
             with self.frameLock:
-                frame = None if self.frame is None else self.frame.copy()
+                sourceFrame = self.processedFrame if self.processedFrame is not None else self.frame
+                frame = None if sourceFrame is None else sourceFrame.copy()
 
             success, buffer = cv2.imencode(".jpg", frame)
             if not success:
@@ -290,17 +314,7 @@ def stolLines(frame):
 
     endLine = (elA, elB)
 
-    polygonLines = np.array([
-        [int(newWidth * 0.53), int(newHeight * 0.25)], 
-        [int(newWidth * 0), int(newHeight * 0.6)], 
-        [int(newWidth * 0), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 0.5)], 
-        [int(newWidth * 0.75), int(newHeight * 0.28)]])
-
-    violationDetectionArea = polygonLines
-
-    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
+    return (newWidth, newHeight, countingLine, startLine, endLine)
 
 # SAMBAT TO PATIMBAO LINES
 def stopLines(frame):
@@ -346,22 +360,7 @@ def stopLines(frame):
 
     endLine = (elA, elB)
 
-    # VIOLATION DETECTION AREA - PATIMBAO
-    polygonLines = np.array([
-        [int(newWidth * 0.00), int(newHeight * 0.40)],
-        [int(newWidth * 0.08), int(newHeight * 0.35)],
-        [int(newWidth * 0.20), int(newHeight * 0.31)],
-        [int(newWidth * 0.38), int(newHeight * 0.30)],
-        [int(newWidth * 0.58), int(newHeight * 0.30)],
-        [int(newWidth * 0.78), int(newHeight * 0.34)],
-        [int(newWidth * 0.94), int(newHeight * 0.42)],
-        [int(newWidth * 1.00), int(newHeight * 0.48)],
-        [int(newWidth * 1.00), int(newHeight * 1.00)],
-        [int(newWidth * 0.00), int(newHeight * 1.00)]
-    ])    
-    violationDetectionArea = polygonLines
-
-    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)       
+    return (newWidth, newHeight, countingLine, startLine, endLine)
 
 # SAMBAT TO SUNSTAR LINES
 def stosLines(frame):
@@ -406,16 +405,7 @@ def stosLines(frame):
 
     endLine = (elA, elB)
 
-    polygonLines = np.array([
-        [int(newWidth * 0.3), int(newHeight * 0.2)], 
-        [int(newWidth * 0.001), int(newHeight * 0.5)], 
-        [int(newWidth * 0), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 1)],
-        [int(newWidth * 1), int(newHeight * 0.7)], 
-        [int(newWidth * 0.53), int(newHeight * 0.18)]])
-
-    violationDetectionArea = polygonLines
-    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
+    return (newWidth, newHeight, countingLine, startLine, endLine)
 
 # SAMBAT TO BUBUKAL
 def stocLines(frame):
@@ -460,23 +450,7 @@ def stocLines(frame):
 
     endLine = (elA, elB)
 
-    # VIOLATION DETECTION AREA - COMPLEX
-    polygonLines = np.array([
-        [int(newWidth * 0.00), int(newHeight * 0.48)],
-        [int(newWidth * 0.10), int(newHeight * 0.40)],
-        [int(newWidth * 0.24), int(newHeight * 0.30)],
-        [int(newWidth * 0.40), int(newHeight * 0.21)],
-        [int(newWidth * 0.55), int(newHeight * 0.18)],
-        [int(newWidth * 0.70), int(newHeight * 0.20)],
-        [int(newWidth * 0.84), int(newHeight * 0.30)],
-        [int(newWidth * 0.95), int(newHeight * 0.44)],
-        [int(newWidth * 1.00), int(newHeight * 0.56)],
-        [int(newWidth * 1.00), int(newHeight * 1.00)],
-        [int(newWidth * 0.00), int(newHeight * 1.00)]
-    ])
-    violationDetectionArea = polygonLines
-
-    return (newWidth, newHeight, countingLine, startLine, endLine, violationDetectionArea)
+    return (newWidth, newHeight, countingLine, startLine, endLine)
 
 
 fcc = trafficForecast()
