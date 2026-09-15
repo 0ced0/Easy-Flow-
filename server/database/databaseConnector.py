@@ -1,9 +1,13 @@
 import mysql.connector
 import os
+import time
 from mysql.connector import Error
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import statistics
+from environment import validateEnvironment
+
+environmentConfig = validateEnvironment()
 
 dbUser = os.environ.get("DB_USER")
 dbPassword = os.environ.get("DB_PASSWORD")
@@ -15,8 +19,20 @@ DB_CONFIG = {
     "host" : os.environ.get("DB_HOST", "127.0.0.1"),
     "user" : dbUser,
     "password" : dbPassword,
-    "database" : os.environ.get("DB_NAME", "easyflow"),
+    "database" : environmentConfig["databaseName"],
     }
+
+PERF_LOGGING = os.environ.get("EASYFLOW_PERF_LOGGING", "").strip().lower() == "true"
+
+def logDbPerf(name, started, connectDuration, queryDuration):
+    if not PERF_LOGGING:
+        return
+
+    totalDuration = time.perf_counter() - started
+    print(
+        f"[DB PERF] {name} connect={connectDuration * 1000:.1f}ms "
+        f"query={queryDuration * 1000:.1f}ms total={totalDuration * 1000:.1f}ms"
+    )
 
 def saveTrafficInterval(data: dict) -> bool:
     db = None
@@ -142,11 +158,16 @@ def getForecastIntervals(lag: int | None = 12):
             db.close()
 
 def dbGetMonthlyData(cameraId, month=None):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
 
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query="""
@@ -164,13 +185,20 @@ def dbGetMonthlyData(cameraId, month=None):
         """
         values=[cameraId, month, month]
 
+        queryStarted = time.perf_counter()
         cursor.execute(query, values)
-
         data = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
         return data
     
     except ValueError as error:
         print(error)
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetMonthlyData", started, connectDuration, queryDuration)
 
 def dbGetWeeklyData(cameraId, month):
     db = None
@@ -213,6 +241,9 @@ def dbGetWeeklyData(cameraId, month):
             db.close()
 
 def dbGetHourlyData(cameraId, date=None):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
 
@@ -220,7 +251,9 @@ def dbGetHourlyData(cameraId, date=None):
         date = datetime.now(ZoneInfo("Asia/Manila")).date()
 
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query = """
@@ -236,71 +269,97 @@ def dbGetHourlyData(cameraId, date=None):
         """
         values=[cameraId, date, date]
 
+        queryStarted = time.perf_counter()
         cursor.execute(query, values)
 
         data = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
         return data
     
     except Error as error:
         print(error)
 
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetHourlyData", started, connectDuration, queryDuration)
+
 def dbGetDailyData(cameraId, page, dateFilter):
-        offset = (page - 1) * 6
-        db = None
-        cursor = None
-
-        try:
-            db = mysql.connector.connect(**DB_CONFIG)
-            cursor = db.cursor(dictionary=True)
-
-            query = """
-                SELECT
-                    camera_id,
-                    DATE(created_at) AS date,
-                    DAY(created_at) AS day,
-
-                    COALESCE(SUM(vehicle_count), 0) AS total_vehicle_count,
-                    COALESCE(AVG(traffic_flow), 0) AS average_flow,
-                    COALESCE(AVG(spatial_density), 0) AS average_density
-
-                FROM traffic_interval
-
-                WHERE camera_id = %s
-
-                AND created_at >= STR_TO_DATE(
-                    CONCAT(%s, '-01'),
-                    '%Y-%m-%d'
-                )
-
-                AND created_at < DATE_ADD(
-                    STR_TO_DATE(
-                        CONCAT(%s, '-01'),
-                        '%Y-%m-%d'
-                    ),
-                    INTERVAL 1 MONTH
-                )
-
-                GROUP BY DATE(created_at)
-
-                ORDER BY DATE(created_at)
-                LIMIT 6
-                OFFSET %s
-            """
-            values=[cameraId, dateFilter, dateFilter, offset]
-
-            cursor.execute(query, values)
-            response = cursor.fetchall()
-            return response
-        
-        except Error as error:
-            print(error)
-
-def dbGetDataTable(cameraId=None, page=None, dateFilter=None):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
+    offset = (page - 1) * 6
     db = None
     cursor = None
 
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
+        cursor = db.cursor(dictionary=True)
+
+        query = """
+            SELECT
+                camera_id,
+                DATE(created_at) AS date,
+                DAY(created_at) AS day,
+
+                COALESCE(SUM(vehicle_count), 0) AS total_vehicle_count,
+                COALESCE(AVG(traffic_flow), 0) AS average_flow,
+                COALESCE(AVG(spatial_density), 0) AS average_density
+
+            FROM traffic_interval
+
+            WHERE camera_id = %s
+
+            AND created_at >= STR_TO_DATE(
+                CONCAT(%s, '-01'),
+                '%Y-%m-%d'
+            )
+
+            AND created_at < DATE_ADD(
+                STR_TO_DATE(
+                    CONCAT(%s, '-01'),
+                    '%Y-%m-%d'
+                ),
+                INTERVAL 1 MONTH
+            )
+
+            GROUP BY DATE(created_at)
+
+            ORDER BY DATE(created_at)
+            LIMIT 6
+            OFFSET %s
+        """
+        values=[cameraId, dateFilter, dateFilter, offset]
+
+        queryStarted = time.perf_counter()
+        cursor.execute(query, values)
+        response = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
+        return response
+    except Error as error:
+        print(error)
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetDailyData", started, connectDuration, queryDuration)
+
+def dbGetDataTable(cameraId=None, page=None, dateFilter=None):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
+    db = None
+    cursor = None
+
+    try:
+        connectStarted = time.perf_counter()
+        db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         if not dateFilter:
@@ -388,11 +447,19 @@ def dbGetDataTable(cameraId=None, page=None, dateFilter=None):
             """
             values=[cameraId, dateFilter, dateFilter, offset]
 
+        queryStarted = time.perf_counter()
         cursor.execute(query, values)
         response = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
         return response
     except Error as error:
         print(error)
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetDataTable", started, connectDuration, queryDuration)
 
 def dbPostTimerConfig(timerData):
     db = None
@@ -635,16 +702,20 @@ def dbGetGreenLightTimers():
 
 
 def dbGetDensityConfig():
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
 
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
-
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query = """
-            SELECT 
+            SELECT
                 approach_id,
                 approach_name,
                 freeflow_max,
@@ -652,22 +723,32 @@ def dbGetDensityConfig():
             FROM density_config
             ORDER BY approach_id
         """
-
+        queryStarted = time.perf_counter()
         cursor.execute(query)
-
         configs = cursor.fetchall()
-
+        queryDuration = time.perf_counter() - queryStarted
         return configs
     except Error as error:
         print(error)
         return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetDensityConfig", started, connectDuration, queryDuration)
 
 def dbGetFlowConfiguration():
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
 
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query = """
@@ -679,25 +760,35 @@ def dbGetFlowConfiguration():
             FROM flow_config
             ORDER BY approach_id
         """
-
+        queryStarted = time.perf_counter()
         cursor.execute(query)
-
         configs = cursor.fetchall()
-
+        queryDuration = time.perf_counter() - queryStarted
         return configs
     except Error as error:
         print(error)
         return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetFlowConfiguration", started, connectDuration, queryDuration)
 
 def dbGetViolationData():
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query = """
-            SELECT 
+            SELECT
                 camera_id,
                 vehicle,
                 violation_type,
@@ -707,19 +798,30 @@ def dbGetViolationData():
             ORDER BY time_stamp DESC
             LIMIT 40
         """
+        queryStarted = time.perf_counter()
         cursor.execute(query)
-
         data = cursor.fetchall()
-
+        queryDuration = time.perf_counter() - queryStarted
         return data
     except Error as error:
         print(error)
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetViolationData", started, connectDuration, queryDuration)
 
 def dbGetAllViolationData():
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
     db = None
     cursor = None
     try:
+        connectStarted = time.perf_counter()
         db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
         cursor = db.cursor(dictionary=True)
 
         query = """
@@ -731,13 +833,20 @@ def dbGetAllViolationData():
             FROM violations
             ORDER BY time_stamp DESC
         """
+        queryStarted = time.perf_counter()
         cursor.execute(query)
-
-        return cursor.fetchall()
+        data = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
+        return data
     except Error as error:
         print(error)
         return []
-
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetAllViolationData", started, connectDuration, queryDuration)
 def dbGetViolationPage(page=1, pageSize=10, searchTerm="", violationType=None):
     db = None
     cursor = None

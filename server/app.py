@@ -3,6 +3,10 @@ from flask import Blueprint;
 from jinja2 import TemplateNotFound;
 from flask_cors import CORS;
 import logging
+from environment import validateEnvironment;
+
+validateEnvironment()
+
 from streamControl import stream, startBackend;
 from server.dataTableHandler import dataRequest;
 from trafficLightControl import intersectionTimers;

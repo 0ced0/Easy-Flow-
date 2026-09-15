@@ -32,6 +32,7 @@ import {getStolStatData,
 } from '../hooks/api'
 import { BarChart } from 'recharts'
 
+const PERF_LOGGING = import.meta.env.DEV && import.meta.env.VITE_PERF_LOGGING === 'true'
 
 export default function MainDashboard() {
     const [stolVehicleNumbers, setStolVehicleNumbers] = useState(0)
@@ -100,61 +101,101 @@ export default function MainDashboard() {
 
     useEffect(() => {
         let isRunning = true
+        let shortPollTimeout = null
+        let violationPollTimeout = null
+        let chartPollTimeout = null
 
-        const initialize = async () => {
-            const violationDataResponse = await getViolationData()
-            const violationData = await violationDataResponse.json()
+        const loadConfiguration = async () => {
+            try {
+                const [densityConfigResponse, flowConfigurationResponse] = await Promise.all([
+                    getDensityConfig(),
+                    getFlowConfig(),
+                ])
+                const [densityConfigData, flowConfigurationData] = await Promise.all([
+                    densityConfigResponse.json(),
+                    flowConfigurationResponse.json(),
+                ])
 
-            setViolationDisplay(violationData[0])
+                if (!isRunning) return
+
+                setDensityConfiguration(densityConfigData)
+                setFlowConfiguration(flowConfigurationData)
+            } catch (error) {
+                console.error(error)
+            }
         }
         
         const shortPoll = async () => {
             if (!isRunning) return 
 
-            try{
-                const stopStatResponse = await getStopStatData()
-                const stopStatJson = await stopStatResponse.json()
+            try {
+                const cameraStatsStarted = performance.now()
+                const [stopStatResponse, stolStatResponse, stocStatResponse, stosStatResponse] = await Promise.all([
+                    getStopStatData(),
+                    getStolStatData(),
+                    getStocStatData(),
+                    getStosStatData(),
+                ])
+                const [stopStatJson, stolStatJson, stocStatJson, stosStatJson] = await Promise.all([
+                    stopStatResponse.json(),
+                    stolStatResponse.json(),
+                    stocStatResponse.json(),
+                    stosStatResponse.json(),
+                ])
 
-                const stolStatResponse = await getStolStatData()
-                const stolStatJson = await stolStatResponse.json()
-                
-                const stocStatResponse =  await getStocStatData()
-                const stocStatJson = await stocStatResponse.json()
+                if (PERF_LOGGING) {
+                    console.info(`[PERF] camera stats: ${(performance.now() - cameraStatsStarted).toFixed(1)}ms`)
+                }
 
-                const stosStatResponse =  await getStosStatData()
-                const stosStatJson = await stosStatResponse.json()
-
+                const trafficStateStarted = performance.now()
                 const tltResponse = await getTrafficLightData()
                 const tltData = await tltResponse.json()
 
-                const densityConfigResponse = await getDensityConfig()
-                const densityConfigData = await densityConfigResponse.json()
+                if (PERF_LOGGING) {
+                    console.info(`[PERF] traffic state: ${(performance.now() - trafficStateStarted).toFixed(1)}ms`)
+                }
 
-                const flowConfigurationResponse = await getFlowConfig()
-                const flowConfigurationData = await flowConfigurationResponse.json()
-
-                const violationDataResponse = await getViolationData()
-                const violationData = await violationDataResponse.json()
+                if (!isRunning) return
 
                 setStopVehicleNumbers(stopStatJson.vehicleCount)
                 setStolVehicleNumbers(stolStatJson.vehicleCount)
                 setStocVehicleNumbers(stocStatJson.vehicleCount)
                 setStosVehicleNumbers(stosStatJson.vehicleCount)
-                setViolationData(violationData)
-
-
                 setTrafficLightData([tltData.trafficLightData, tltData.allowedApproach])
                 setApproachStates(tltData.state)
                 setCurrentConfiguration(tltData.currentConfiguration)
                 setTimerConfiguration(tltData.currentConfiguration)
-                setDensityConfiguration(densityConfigData)
-                setFlowConfiguration(flowConfigurationData)
-            }catch(error){
+            } catch (error) {
                 console.error(error)
             }
 
-            if (isRunning){
-                setTimeout(shortPoll, 80)
+            if (isRunning) {
+                shortPollTimeout = window.setTimeout(shortPoll, 2000)
+            }
+        }
+
+        const pollViolations = async () => {
+            if (!isRunning) return
+
+            try {
+                const violationsStarted = performance.now()
+                const violationDataResponse = await getViolationData()
+                const violationData = await violationDataResponse.json()
+
+                if (PERF_LOGGING) {
+                    console.info(`[PERF] violations: ${(performance.now() - violationsStarted).toFixed(1)}ms`)
+                }
+
+                if (!isRunning) return
+
+                setViolationData(violationData)
+                setViolationDisplay((currentViolation) => currentViolation ?? violationData[0] ?? null)
+            } catch (error) {
+                console.error(error)
+            }
+
+            if (isRunning) {
+                violationPollTimeout = window.setTimeout(pollViolations, 10000)
             }
         }
 
@@ -237,18 +278,19 @@ export default function MainDashboard() {
             }
 
             if(isRunning){
-                setTimeout(updateChartData, 30000)
+                chartPollTimeout = window.setTimeout(updateChartData, 30000)
             }
         }
+        loadConfiguration()
         shortPoll()
+        pollViolations()
         updateChartData()
-        initialize()
 
         return () => {
-            clearTimeout(shortPoll)
-            clearTimeout(updateChartData)
-            // URL.revokeObjectURL(frame)
             isRunning = false
+            if (shortPollTimeout !== null) clearTimeout(shortPollTimeout)
+            if (violationPollTimeout !== null) clearTimeout(violationPollTimeout)
+            if (chartPollTimeout !== null) clearTimeout(chartPollTimeout)
         }
 
     }, [])

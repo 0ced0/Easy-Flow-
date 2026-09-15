@@ -6,6 +6,9 @@ import time
 import os
 import atexit
 from urllib.parse import quote
+from environment import validateEnvironment;
+
+environmentConfig = validateEnvironment()
 
 from CV import ComputerVisionComponent, VIOLATION_CHECK_INTERVAL;
 from parkingRois import PARKING_ROIS, parkingROIsForCamera;
@@ -30,7 +33,7 @@ missingCctvEnvironmentNames = [
     name for name, value in cctvEnvironment.items() if not value
 ]
 
-videoSource = os.environ.get("EASYFLOW_VIDEO_SOURCE", "live").strip().lower()
+videoSource = environmentConfig["videoSource"]
 
 if videoSource == "local":
     stolVideoPath = base_dir / "videoData" / "sambat_to_lspu.mp4"

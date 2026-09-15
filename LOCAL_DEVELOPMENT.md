@@ -47,32 +47,30 @@ Optional database connection settings:
 $env:DB_HOST = "127.0.0.1"
 ```
 
-The launcher always defaults to `easyflow_local`, even if `DB_NAME` is set in your
-shell. To use a differently named development database, run the launcher directly:
-
-```powershell
-.\scripts\run-local.ps1 -DbName "easyflow_dev"
-```
+The launcher always uses `easyflow_local`. It refuses a non-local database host and
+refuses to start if municipal CCTV environment variables are set.
 
 Open `http://localhost:5173` after both the Flask and Vite consoles report that they
 are running.
 
 ## Isolation from the live workflow
 
-The local launcher runs `server/local_app.py`, which explicitly sets:
+The local launcher validates and sets:
 
 ```text
+EASYFLOW_ENV=local
 EASYFLOW_VIDEO_SOURCE=local
 ENABLE_SUMO=false
 DB_NAME=easyflow_local
 ```
 
-It does not read CCTV credentials. It also refuses the database name `easyflow` to
-help prevent local video processing from writing to the known live database.
+It validates all four local MP4 files before the backend starts and rejects municipal
+CCTV credentials or any non-loopback database host. `server/local_app.py` does not
+provide defaults; it fails if this explicit configuration is missing.
 
-The live workflow remains `server/app.py`. It defaults to `EASYFLOW_VIDEO_SOURCE=live`
-and still requires the CCTV environment variables. Do not use `server/app.py` for
-local video development.
+The live workflow remains `server/app.py`, but it must be started explicitly with
+`EASYFLOW_ENV=live`, `EASYFLOW_VIDEO_SOURCE=live`, `DB_NAME=easyflow`, and all
+municipal CCTV credentials. Do not use `server/app.py` for local video development.
 
 ## Stop the environment
 

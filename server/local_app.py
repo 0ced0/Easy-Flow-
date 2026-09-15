@@ -1,11 +1,7 @@
 """Local-only Easy-Flow launcher using the bundled MP4 test videos."""
 
-import os
-
-# Set these before importing app.py, which imports the stream and database modules.
-os.environ["EASYFLOW_VIDEO_SOURCE"] = "local"
-os.environ["DB_NAME"] = os.environ.get("EASYFLOW_LOCAL_DB_NAME", "easyflow_local")
-os.environ.setdefault("ENABLE_SUMO", "false")
+# The PowerShell launcher supplies and validates all local-only environment variables
+# before this module imports app.py.
 
 from app import app, startBackend
 
