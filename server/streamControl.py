@@ -30,27 +30,39 @@ missingCctvEnvironmentNames = [
     name for name, value in cctvEnvironment.items() if not value
 ]
 
-if missingCctvEnvironmentNames:
-    raise RuntimeError(
-        "Missing required CCTV environment variables: "
-        + ", ".join(missingCctvEnvironmentNames)
-    )
+videoSource = os.environ.get("EASYFLOW_VIDEO_SOURCE", "live").strip().lower()
 
-def cctvCredentials(cameraPrefix):
-    return (
-        f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_USERNAME'], safe='')}:"
-        f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_PASSWORD'], safe='')}"
-    )
+if videoSource == "local":
+    stolVideoPath = base_dir / "videoData" / "sambat_to_lspu.mp4"
+    stopVideoPath = base_dir / "videoData" / "sambat_to_patimbao.mp4"
+    stosVideoPath = base_dir / "videoData" / "sambat_to_sunstar.mp4"
+    stocVideoPath = base_dir / "videoData" / "sambat_to_complex.mp4"
 
-stolVideoPath = f"rtsp://{cctvCredentials('STOL')}@127.0.0.1:18554/Streaming/Channels/101"
-stopVideoPath = f"rtsp://{cctvCredentials('STOP')}@127.0.0.1:18555/Streaming/Channels/101"
-stosVideoPath = f"rtsp://{cctvCredentials('STOS')}@127.0.0.1:18556/Streaming/Channels/101"
-stocVideoPath = f"rtsp://{cctvCredentials('STOC')}@127.0.0.1:18557/Streaming/Channels/101"
+    missingVideoPaths = [
+        str(path) for path in (stolVideoPath, stopVideoPath, stosVideoPath, stocVideoPath)
+        if not path.is_file()
+    ]
+    if missingVideoPaths:
+        raise RuntimeError("Missing local test video files: " + ", ".join(missingVideoPaths))
+elif videoSource == "live":
+    if missingCctvEnvironmentNames:
+        raise RuntimeError(
+            "Missing required CCTV environment variables: "
+            + ", ".join(missingCctvEnvironmentNames)
+        )
 
-# stolVideoPath = Path(base_dir/"videoData/sambat_to_lspu.mp4")
-# stopVideoPath = Path(base_dir/"videoData/sambat_to_patimbao.mp4")
-# stosVideoPath = Path(base_dir/"videoData/sambat_to_sunstar.mp4")
-# stocVideoPath = Path(base_dir/"videoData/sambat_to_complex.mp4")
+    def cctvCredentials(cameraPrefix):
+        return (
+            f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_USERNAME'], safe='')}:"
+            f"{quote(cctvEnvironment[f'{cameraPrefix}_CCTV_PASSWORD'], safe='')}"
+        )
+
+    stolVideoPath = f"rtsp://{cctvCredentials('STOL')}@127.0.0.1:18554/Streaming/Channels/101"
+    stopVideoPath = f"rtsp://{cctvCredentials('STOP')}@127.0.0.1:18555/Streaming/Channels/101"
+    stosVideoPath = f"rtsp://{cctvCredentials('STOS')}@127.0.0.1:18556/Streaming/Channels/101"
+    stocVideoPath = f"rtsp://{cctvCredentials('STOC')}@127.0.0.1:18557/Streaming/Channels/101"
+else:
+    raise RuntimeError("EASYFLOW_VIDEO_SOURCE must be either 'local' or 'live'.")
 
 DRAW_PARKING_ROI = False
 

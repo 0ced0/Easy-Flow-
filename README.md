@@ -1,5 +1,10 @@
 # React + Vite
 
+## Local video development
+
+See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for the isolated local-video startup
+workflow, database requirements, and troubleshooting.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

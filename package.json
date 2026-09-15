@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\run-local.ps1",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
