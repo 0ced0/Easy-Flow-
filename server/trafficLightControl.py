@@ -6,6 +6,12 @@ import threading
 import os
 
 
+CONTROLLER_TICK_SECONDS = 1.0
+YELLOW_SECONDS = 4
+ALL_RED_SECONDS = 3
+CLEARANCE_SECONDS = YELLOW_SECONDS + ALL_RED_SECONDS
+TLC_TRACE = os.environ.get("EASYFLOW_TLC_TRACE", "").strip().lower() == "true"
+
 intersectionTimers = Blueprint("intersectionTimers", __name__)
 
 def trafficThresholds(traffic):
@@ -54,7 +60,16 @@ class trafficLightControls:
         self.adaptedCycle = self.timerCompiler()
         self.threadTrafficLightLoop = None
         self.allowedApproach = "A"
+        self.controllerPhase = "green"
+        self.phaseRemainingSeconds = 0
+        # This changes only when the controller changes a signal phase.  Timer
+        # ticks deliberately do not affect it, so clients can distinguish a
+        # resync from a light transition.
+        self.stateVersion = 0
         self.states
+
+    def advanceStateVersion(self):
+        self.stateVersion += 1
 
     def updateConfiguration(self):
         response = self.getTimerConfiguration()
@@ -72,6 +87,10 @@ class trafficLightControls:
             "slowdown" : slowdownTimers,
             "congested" : congestedTimers,
         }
+
+    def refreshAdaptedCycle(self):
+        # Preserve the active cycle. Enforcer edits become the next cycle.
+        self.adaptedCycle = self.timerCompiler()
 
     def timerCompiler(self):
 
@@ -125,9 +144,9 @@ class trafficLightControls:
         timerA, timerB, timerC, timerD = self.currentCycle
 
         approachA = ["green", (timerA), "A"]
-        approachB = ["red" , (timerA + 6), "B"]
-        approachC = ["red", (timerA + timerB + (6*2)), "C"]
-        approachD = ["red", (timerA + timerB + timerC + (6*3)), "D"]
+        approachB = ["red" , (timerA + CLEARANCE_SECONDS), "B"]
+        approachC = ["red", (timerA + timerB + (CLEARANCE_SECONDS * 2)), "C"]
+        approachD = ["red", (timerA + timerB + timerC + (CLEARANCE_SECONDS * 3)), "D"]
 
         approaches = [approachA, approachB, approachC, approachD]
         return approaches
@@ -138,16 +157,21 @@ class trafficLightControls:
         SC.setLight(self.allowedApproach, "green")
         SC.step()
         approaches = self.initializeTimers()
+        self.trafficLightData = approaches
+        self.controllerPhase = "green"
+        self.phaseRemainingSeconds = approaches[0][1]
+        self.advanceStateVersion()
         clearance = False
         transition = False
         cycle = True
         while True:
             while cycle:
                 if transition:
-                    while not clearance:
-                        approaches, clearance = self.clearance(self.allowedApproach, approaches, clearance)
-                        approaches, transition = self.timeStep(approaches, transition, self.allowedApproach, steps=3)
-                
+                    approaches, clearance = self.clearance(self.allowedApproach, approaches, clearance)
+                    approaches, transition = self.timeStep(approaches, transition, self.allowedApproach, steps=YELLOW_SECONDS, clearancePhase=True)
+                    approaches, clearance = self.clearance(self.allowedApproach, approaches, clearance)
+                    approaches, transition = self.timeStep(approaches, transition, self.allowedApproach, steps=ALL_RED_SECONDS, clearancePhase=True)
+
                     approaches, self.allowedApproach, transition, clearance, cycle = self.transition(approaches, self.allowedApproach, transition, clearance, cycle)
 
                 approaches, transition = self.timeStep(approaches, transition, self.allowedApproach)
@@ -180,6 +204,11 @@ class trafficLightControls:
 
 
         SC.setLight(allowedApproach, "green")
+        self.controllerPhase = "green"
+        self.phaseRemainingSeconds = next(
+            approach[1] for approach in approaches if approach[2] == allowedApproach
+        )
+        self.advanceStateVersion()
         transition = False
         clearance = False
         return approaches, allowedApproach, transition, clearance, cycle
@@ -195,58 +224,75 @@ class trafficLightControls:
             match approaches[0][0]:
                 case "green":
                     approaches[0][0] = "yellow"
-                    approaches[0][1] = 4
+                    approaches[0][1] = YELLOW_SECONDS
                     state = "yellow"
+                    self.controllerPhase = "yellow"
+                    self.phaseRemainingSeconds = YELLOW_SECONDS
 
                 case "yellow":
                     approaches[0][0] = "red"
-                    approaches[0][1] = currentCycle[1] + currentCycle[2] + currentCycle[3] + (7*3)
+                    approaches[0][1] = currentCycle[1] + currentCycle[2] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
                     clearance = True
                     state = "red"
+                    self.controllerPhase = "all-red"
+                    self.phaseRemainingSeconds = ALL_RED_SECONDS
 
         elif allowedApproach == "B":
             approach = "B"
             match approaches[1][0]:
                 case "green":
                     approaches[1][0] = "yellow"
-                    approaches[1][1] = 4
+                    approaches[1][1] = YELLOW_SECONDS
                     state = "yellow"
+                    self.controllerPhase = "yellow"
+                    self.phaseRemainingSeconds = YELLOW_SECONDS
 
                 case "yellow":
                     approaches[1][0] = "red"
-                    approaches[1][1] = adaptedCycle[0] + currentCycle[2] + currentCycle[3] + (7*3)
+                    approaches[1][1] = adaptedCycle[0] + currentCycle[2] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
                     clearance = True
                     state = "red"
+                    self.controllerPhase = "all-red"
+                    self.phaseRemainingSeconds = ALL_RED_SECONDS
 
         elif allowedApproach == "C":
             approach = "C"
             match approaches[2][0]:
                 case "green":
                     approaches[2][0] = "yellow"
-                    approaches[2][1] = 4
+                    approaches[2][1] = YELLOW_SECONDS
                     state = "yellow"
+                    self.controllerPhase = "yellow"
+                    self.phaseRemainingSeconds = YELLOW_SECONDS
 
                 case "yellow":
                     approaches[2][0] = "red"
-                    approaches[2][1] = adaptedCycle[0] + adaptedCycle[1] + currentCycle[3] + (7*3)
+                    approaches[2][1] = adaptedCycle[0] + adaptedCycle[1] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
                     clearance = True
                     state = "red"
+                    self.controllerPhase = "all-red"
+                    self.phaseRemainingSeconds = ALL_RED_SECONDS
 
         elif allowedApproach == "D":
             approach = "D"
             match approaches[3][0]:
                 case "green":
                     approaches[3][0] = "yellow"
-                    approaches[3][1] = 4
+                    approaches[3][1] = YELLOW_SECONDS
                     state = "yellow"
+                    self.controllerPhase = "yellow"
+                    self.phaseRemainingSeconds = YELLOW_SECONDS
 
                 case "yellow":
                     approaches[3][0] = "red"
-                    approaches[3][1] = currentCycle[1] + currentCycle[2] + currentCycle[0] + (7*3)
+                    approaches[3][1] = currentCycle[1] + currentCycle[2] + currentCycle[0] + (CLEARANCE_SECONDS * 3)
                     clearance = True
                     state = "red"
+                    self.controllerPhase = "all-red"
+                    self.phaseRemainingSeconds = ALL_RED_SECONDS
 
         SC.setLight(approach, state)
+        self.advanceStateVersion()
         return approaches, clearance
 
     def calculateNextCycle(self, cycle):
@@ -255,33 +301,81 @@ class trafficLightControls:
         cycle=True
         return cycle
     
-    def timeStep(self, approaches, transition, allowedApproach, steps=None):
+    def timeStep(self, approaches, transition, allowedApproach, steps=None, clearancePhase=False):
 
         if steps == None:
             steps = 1
 
-        for _ in range(steps):        
-        
+        for _ in range(steps):
+            tickStarted = time.perf_counter()
+            if clearancePhase:
+                self.trafficLightData = approaches
+                if TLC_TRACE:
+                    timers = " ".join(f"{approach[2]}={approach[1]}" for approach in approaches)
+                    print(f"[TLC TRACE] t={time.strftime('%H:%M:%S')} version={self.stateVersion} phase={self.controllerPhase} allowed={allowedApproach} phase_remaining={self.phaseRemainingSeconds} {timers}")
+                remainingSleep = CONTROLLER_TICK_SECONDS - (time.perf_counter() - tickStarted)
+                if remainingSleep > 0:
+                    time.sleep(remainingSleep)
             for index, approach in enumerate(approaches):
-
                 approach[1] = max(0, approach[1] - 1) 
+
+            if clearancePhase:
+                self.phaseRemainingSeconds = max(0, self.phaseRemainingSeconds - 1)
+                continue
 
             if next((approach[1] for approach in approaches if approach[2] == allowedApproach)) == 0:
                 transition = True
 
             self.trafficLightData = approaches
+            self.phaseRemainingSeconds = next(
+                approach[1] for approach in approaches if approach[2] == allowedApproach
+            )
             SC.step()
+            if TLC_TRACE:
+                timers = " ".join(
+                    f"{approach[2]}={approach[1]}" for approach in approaches
+                )
+                print(
+                    f"[TLC TRACE] t={time.strftime('%H:%M:%S')} "
+                    f"version={self.stateVersion} "
+                    f"phase={self.controllerPhase} phase_remaining={self.phaseRemainingSeconds} "
+                    f"allowed={allowedApproach} {timers}"
+                )
+
+            remainingSleep = CONTROLLER_TICK_SECONDS - (time.perf_counter() - tickStarted)
+            if remainingSleep > 0:
+                time.sleep(remainingSleep)
         return approaches, transition 
 
     def returnTrafficLightData(self):
-        trafficLightData = self.trafficLightData
+        # Keep the legacy rows while also publishing absolute timing anchors.
+        # Every row's timer is the controller's own countdown-to-expiry value;
+        # a red row is not assumed to mean the same event as green or yellow.
+        trafficLightData = [list(approach) for approach in self.trafficLightData]
         allowedApproach = self.allowedApproach
+        serverTimestamp = time.time()
+        approaches = [
+            {
+                "approach": approach[2],
+                "state": approach[0],
+                "remaining_seconds": approach[1],
+                "ends_at": serverTimestamp + approach[1],
+                "countdown_event": "controller_timer_expiry",
+            }
+            for approach in trafficLightData
+            if len(approach) >= 3
+        ]
         return{
             "message" : "success",
             "trafficLightData" : trafficLightData,
             "allowedApproach" : allowedApproach,
             "currentConfiguration" : self.currentConfiguration,
-            "state" : self.states
+            "state" : self.states,
+            "server_timestamp": serverTimestamp,
+            "state_version": self.stateVersion,
+            "controller_phase": self.controllerPhase,
+            "phase_remaining_seconds": self.phaseRemainingSeconds,
+            "approaches": approaches,
         }
 
     def startTrafficLightControl(self):
@@ -383,6 +477,7 @@ def updateTrafficLightConfig():
 
     if success:
         TLC.updateConfiguration()
+        TLC.refreshAdaptedCycle()
         return jsonify({
             "success": True,
             "message": "Traffic light configuration updated"
@@ -451,6 +546,7 @@ def updateDensityConfig():
     success = dbPostDensityConfig(configs)
 
     if success:
+        TLC.refreshAdaptedCycle()
         return jsonify({
             "success": True,
             "message": "Traffic light configuration updated"

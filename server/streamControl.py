@@ -1,4 +1,4 @@
-from flask import Blueprint, Response
+from flask import Blueprint, Response, request
 from pathlib import Path;
 import cv2
 import threading 
@@ -36,17 +36,11 @@ missingCctvEnvironmentNames = [
 videoSource = environmentConfig["videoSource"]
 
 if videoSource == "local":
-    stolVideoPath = base_dir / "videoData" / "sambat_to_lspu.mp4"
-    stopVideoPath = base_dir / "videoData" / "sambat_to_patimbao.mp4"
-    stosVideoPath = base_dir / "videoData" / "sambat_to_sunstar.mp4"
-    stocVideoPath = base_dir / "videoData" / "sambat_to_complex.mp4"
-
-    missingVideoPaths = [
-        str(path) for path in (stolVideoPath, stopVideoPath, stosVideoPath, stocVideoPath)
-        if not path.is_file()
-    ]
-    if missingVideoPaths:
-        raise RuntimeError("Missing local test video files: " + ", ".join(missingVideoPaths))
+    localVideoPaths = environmentConfig["localVideoPaths"]
+    stolVideoPath = localVideoPaths["STOL"]
+    stopVideoPath = localVideoPaths["STOP"]
+    stosVideoPath = localVideoPaths["STOS"]
+    stocVideoPath = localVideoPaths["STOC"]
 elif videoSource == "live":
     if missingCctvEnvironmentNames:
         raise RuntimeError(
@@ -68,6 +62,11 @@ else:
     raise RuntimeError("EASYFLOW_VIDEO_SOURCE must be either 'local' or 'live'.")
 
 DRAW_PARKING_ROI = False
+PERF_LOGGING = os.environ.get("EASYFLOW_PERF_LOGGING", "").strip().lower() == "true"
+JPEG_PROFILES = {
+    "main": {"max_fps": 12, "quality": 82, "width": None},
+    "thumbnail": {"max_fps": 4, "quality": 70, "width": 400},
+}
 
 # DEBUG ERROR LIST
 # 
@@ -82,14 +81,16 @@ DRAW_PARKING_ROI = False
 
 
 class streamControl:
-    def __init__(self, videoPath, lineFunction, crossValidation, cameraId):
+    def __init__(self, videoPath, lineFunction, crossValidation, cameraId, cameraName):
 
         # SYSTEM COMPONENTS
         self.CV = ComputerVisionComponent(cameraId)
 
         # VIDEO VARIABLES
         self.videoPath = videoPath
-        self.cap = cv2.VideoCapture(videoPath)
+        self.cameraName = cameraName
+        self.isLocalVideo = videoSource == "local"
+        self.cap = self.openCapture()
         self.videoPath = videoPath
         self.frame = None
         self.processedFrame = None
@@ -105,10 +106,37 @@ class streamControl:
         self.threadSaveIntervalLoop = None
         self.threadViolationMonitoringLoop = None
         self.timer = 0
+        self.processedFrameSequence = 0
+        self.jpegCondition = threading.Condition()
+        self.jpegCaches = {name: {"sequence": 0, "bytes": None} for name in JPEG_PROFILES}
+        self.lastJpegEncodeAt = {name: 0.0 for name in JPEG_PROFILES}
+        self.clientCounts = {name: 0 for name in JPEG_PROFILES}
+        self.perfLock = threading.Lock()
+        self.perfStarted = time.perf_counter()
+        self.perfCvFrames = 0
+        self.perfProfiles = {
+            name: {"encodes": 0, "encode_seconds": 0.0, "bytes": 0, "sends": 0}
+            for name in JPEG_PROFILES
+        }
 
         # LINE LOGIC VARIABLES
         self.lineFunction = lineFunction
         self.crossValidation = crossValidation
+
+    def openCapture(self):
+        cap = cv2.VideoCapture(str(self.videoPath))
+        if self.isLocalVideo:
+            if not cap.isOpened():
+                cap.release()
+                raise RuntimeError(
+                    f"{self.cameraName} could not open simulation video: {self.videoPath}"
+                )
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            print(f"[LOCAL VIDEO] {self.cameraName} opened: {width}x{height} @ {fps:.2f} FPS")
+
+        return cap
 
     def currentApproachSignalState(self):
         # Camera construction order follows the controller's A-D approach order.
@@ -119,14 +147,98 @@ class streamControl:
                 return light[0]
         return "unknown"
 
+    def recordJpegEncode(self, variant, duration, byteCount):
+        with self.perfLock:
+            profile = self.perfProfiles[variant]
+            profile["encodes"] += 1
+            profile["encode_seconds"] += duration
+            profile["bytes"] += byteCount
+
+    def reportVideoPerformance(self):
+        if not PERF_LOGGING:
+            return
+        with self.perfLock:
+            elapsed = time.perf_counter() - self.perfStarted
+            if elapsed < 10:
+                return
+            profileSummary = []
+            for variant, profile in self.perfProfiles.items():
+                encodes = profile["encodes"]
+                averageKb = profile["bytes"] / encodes / 1024 if encodes else 0
+                averageMs = profile["encode_seconds"] / encodes * 1000 if encodes else 0
+                profileSummary.append(
+                    f"{variant}_encode_fps={encodes / elapsed:.1f} "
+                    f"{variant}_avg_kb={averageKb:.1f} "
+                    f"{variant}_encode_avg_ms={averageMs:.1f} "
+                    f"{variant}_send_fps={profile['sends'] / elapsed:.1f} "
+                    f"{variant}_clients={self.clientCounts[variant]}"
+                )
+            print(
+                f"[VIDEO PERF] {self.cameraName} cv_fps={self.perfCvFrames / elapsed:.1f} "
+                + " ".join(profileSummary)
+            )
+            self.perfStarted = time.perf_counter()
+            self.perfCvFrames = 0
+            self.perfProfiles = {
+                name: {"encodes": 0, "encode_seconds": 0.0, "bytes": 0, "sends": 0}
+                for name in JPEG_PROFILES
+            }
+
+    def publishProcessedFrame(self, processedFrame):
+        now = time.perf_counter()
+        with self.jpegCondition:
+            self.processedFrameSequence += 1
+            sequence = self.processedFrameSequence
+            for variant, profile in JPEG_PROFILES.items():
+                if now - self.lastJpegEncodeAt[variant] < 1 / profile["max_fps"]:
+                    continue
+                outputFrame = processedFrame
+                width = profile["width"]
+                if width and processedFrame.shape[1] > width:
+                    height = round(processedFrame.shape[0] * width / processedFrame.shape[1])
+                    outputFrame = cv2.resize(processedFrame, (width, height), interpolation=cv2.INTER_AREA)
+                started = time.perf_counter()
+                success, buffer = cv2.imencode(
+                    ".jpg", outputFrame, [cv2.IMWRITE_JPEG_QUALITY, profile["quality"]]
+                )
+                if not success:
+                    continue
+                jpeg = buffer.tobytes()
+                self.jpegCaches[variant] = {"sequence": sequence, "bytes": jpeg}
+                self.lastJpegEncodeAt[variant] = now
+                self.recordJpegEncode(variant, time.perf_counter() - started, len(jpeg))
+            self.jpegCondition.notify_all()
+
     def capLoop(self):
-
         with self.capLock:
-        
             fps = self.cap.get(cv2.CAP_PROP_FPS)
-
             frameInterval = 1/fps if fps > 0 else 1/25
-            
+
+        if self.isLocalVideo:
+            nextFrameTime = time.perf_counter()
+            while self.running:
+                sleepTime = nextFrameTime - time.perf_counter()
+                if sleepTime > 0:
+                    time.sleep(sleepTime)
+
+                with self.capLock:
+                    success, frame = self.cap.read()
+                    if not success or frame is None:
+                        print(f"[LOCAL VIDEO] {self.cameraName} reached EOF; looping.")
+                        if not self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0):
+                            self.cap.release()
+                            self.cap = self.openCapture()
+                        nextFrameTime = time.perf_counter() + frameInterval
+                        continue
+
+                with self.frameLock:
+                    self.frame = frame
+
+                nextFrameTime += frameInterval
+                if nextFrameTime < time.perf_counter():
+                    nextFrameTime = time.perf_counter()
+            return
+
         while self.running:
             
             with self.capLock:
@@ -141,7 +253,7 @@ class streamControl:
 
                 with self.capLock:
                     self.cap.release()
-                    self.cap = cv2.VideoCapture(self.videoPath)
+                    self.cap = self.openCapture()
             
                 continue
 
@@ -186,6 +298,10 @@ class streamControl:
         if processedFrame is not None:
             with self.frameLock:
                 self.processedFrame = processedFrame
+            with self.perfLock:
+                self.perfCvFrames += 1
+            self.publishProcessedFrame(processedFrame)
+            self.reportVideoPerformance()
     
         
         time.sleep(0.01)
@@ -227,33 +343,32 @@ class streamControl:
         self.threadViolationMonitoringLoop.start()
         self.threadSaveIntervalLoop.start()
 
-    def mjpegGenerator(self):
-        while True:
-
-            with self.frameLock:
-                sourceFrame = self.processedFrame if self.processedFrame is not None else self.frame
-                frame = None if sourceFrame is None else sourceFrame.copy()
-
-            success, buffer = cv2.imencode(".jpg", frame)
-            if not success:
-                return{
-                    "message" : "error converting frame"
-                }
-
-            frame = buffer.tobytes()
-
-            if frame is None:
-                time.sleep(0.05)
-                continue
-                
-            yield(
-                b'--frame\r\n'
-                b'content-type:image/jpeg\r\n\r\n' +
-                frame +
-                b'\r\n'
-            )
-
-            time.sleep(0.03)
+    def mjpegGenerator(self, variant):
+        lastSentSequence = 0
+        with self.jpegCondition:
+            self.clientCounts[variant] += 1
+        try:
+            while self.running:
+                with self.jpegCondition:
+                    self.jpegCondition.wait_for(
+                        lambda: self.jpegCaches[variant]["bytes"] is not None
+                        and self.jpegCaches[variant]["sequence"] > lastSentSequence,
+                        timeout=1.0,
+                    )
+                    cache = self.jpegCaches[variant]
+                    if cache["bytes"] is None or cache["sequence"] <= lastSentSequence:
+                        continue
+                    lastSentSequence = cache["sequence"]
+                    jpeg = cache["bytes"]
+                with self.perfLock:
+                    self.perfProfiles[variant]["sends"] += 1
+                yield (
+                    b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n'
+                )
+        finally:
+            with self.jpegCondition:
+                self.clientCounts[variant] = max(0, self.clientCounts[variant] - 1)
     
     def getStats(self):
         return self.CV.returnStats()
@@ -482,19 +597,27 @@ def stocLines(frame):
 
 
 fcc = trafficForecast()
-stolStream = streamControl(stolVideoPath, stolLines, 1, 1)
-stopStream = streamControl(stopVideoPath, stopLines, 1, 2)
-stosStream = streamControl(stosVideoPath, stosLines, 1, 3)
-stocStream = streamControl(stocVideoPath, stocLines, 1, 4)
+stolStream = streamControl(stolVideoPath, stolLines, 1, 1, "STOL")
+stopStream = streamControl(stopVideoPath, stopLines, 1, 2, "STOP")
+stosStream = streamControl(stosVideoPath, stosLines, 1, 3, "STOS")
+stocStream = streamControl(stocVideoPath, stocLines, 1, 4, "STOC")
     
+
+def streamResponse(cameraStream):
+    variant = request.args.get("variant", "main").lower()
+    if variant not in JPEG_PROFILES:
+        variant = "main"
+    return Response(
+        cameraStream.mjpegGenerator(variant),
+        mimetype='multipart/x-mixed-replace; boundary=frame',
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache"},
+    )
+
 
 # SAMBAT TO LSPU APIS
 @stream.route('/stol_stream_video')
 def stolDisplay():
-    return Response(
-        stolStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+    return streamResponse(stolStream)
 @stream.route("/stol_get_stat_data")
 def stolStatData():
     return stolStream.getStats() 
@@ -505,10 +628,7 @@ def stolUpdate():
 # SAMBAT TO PATIMBAO APIS
 @stream.route("/stop_stream_video")
 def stopDisplay():
-    return Response(
-        stopStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+    return streamResponse(stopStream)
 @stream.route("/stop_get_stat_data")
 def getStopStatData():
     return stopStream.getStats()
@@ -522,10 +642,7 @@ def stopUpdate():
 # SAMBAT TO SUNSTAR APIS
 @stream.route("/stos_stream_video")
 def stosDisplay():
-    return Response(
-        stosStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+    return streamResponse(stosStream)
 @stream.route("/stos_get_stat_data")
 def getStosStatData():
     return stosStream.getStats()
@@ -540,10 +657,7 @@ def stosUpdate():
 # SAMBAT TO COMPLEX APIS
 @stream.route("/stoc_stream_video")
 def stocDisplay():
-    return Response(
-        stocStream.mjpegGenerator(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
+    return streamResponse(stocStream)
 @stream.route("/stoc_get_stat_data")
 def getStocStatData():
     return stocStream.getStats()

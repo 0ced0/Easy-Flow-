@@ -15,7 +15,47 @@ const statusColors = {
     CONGESTED: 'text-red-600',
 }
 
-export default function ApproachCards({approachStates, trafficLightData, stolStatData, stopStatData, stocStatData, stosStatData}) {
+function useLocalTrafficCountdown(trafficTiming) {
+    const [timers, setTimers] = useState({approaches: [], phase: null})
+
+    useEffect(() => {
+        const approaches = trafficTiming?.approaches
+        const clockOffset = trafficTiming?.clockOffset
+        const serverTimestamp = trafficTiming?.serverTimestamp
+        if (!Array.isArray(approaches) || !Number.isFinite(clockOffset)
+            || !Number.isFinite(serverTimestamp)) {
+            return undefined
+        }
+
+        const updateTimers = () => {
+            const estimatedServerNow = Date.now() / 1000 + clockOffset
+            const nextApproachTimers = approaches.map((approach) => Math.max(
+                0,
+                Math.ceil(
+                    approach.remaining_seconds - (estimatedServerNow - serverTimestamp),
+                ),
+            ))
+            const phaseRemaining = Number.isFinite(trafficTiming.phaseRemainingSeconds)
+                ? Math.max(0, Math.ceil(trafficTiming.phaseRemainingSeconds - (estimatedServerNow - serverTimestamp)))
+                : null
+            setTimers((currentTimers) => (
+                currentTimers.phase === phaseRemaining
+                && currentTimers.approaches.length === nextApproachTimers.length
+                && currentTimers.approaches.every((timer, index) => timer === nextApproachTimers[index])
+                    ? currentTimers
+                    : {approaches: nextApproachTimers, phase: phaseRemaining}
+            ))
+        }
+
+        updateTimers()
+        const intervalId = window.setInterval(updateTimers, 200)
+        return () => window.clearInterval(intervalId)
+    }, [trafficTiming])
+
+    return timers
+}
+
+export default function ApproachCards({approachStates, trafficTiming, stolStatData, stopStatData, stocStatData, stosStatData}) {
     const map = useMap()
     const pane = map.getPane('overlayPane')
     const [positions] = useState(() => {
@@ -23,12 +63,14 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
         return cardOffsets.map(([x, y]) => map.containerPointToLatLng([size.x * x, size.y * y]))
     })
     const [, setMapVersion] = useState(0)
-    const trafficLightRows = trafficLightData?.[0] ?? []
+    const trafficLightRows = trafficTiming?.approaches ?? []
+    const localTimers = useLocalTrafficCountdown(trafficTiming)
+    const controllerPhase = trafficTiming?.controllerPhase
     const cards = [
         {label: 'Sambat to LSPU', data: stolStatData, position: 0},
         {label: 'Sambat to Patimbao', data: stopStatData, position: 1},
-        {label: 'Sambat to Complex', data: stocStatData, position: 2},
-        {label: 'Sambat to Sunstar', data: stosStatData, position: 3},
+        {label: 'Sambat to Sunstar', data: stosStatData, position: 2},
+        {label: 'Sambat to Complex', data: stocStatData, position: 3},
     ]
 
     useEffect(() => {
@@ -44,8 +86,12 @@ export default function ApproachCards({approachStates, trafficLightData, stolSta
         <>
             {cards.map((card, index) => {
                 const point = map.latLngToLayerPoint(positions[index])
-                const timer = trafficLightRows[index]?.[1] ?? '--'
-                const lightColor = trafficLightRows[index]?.[0] ?? '#A9A9A9'
+                const timer = controllerPhase === 'all-red'
+                    ? (localTimers.phase ?? '--')
+                    : controllerPhase === 'yellow' && trafficLightRows[index]?.state === 'yellow'
+                        ? (localTimers.phase ?? '--')
+                        : trafficLightRows.length ? (localTimers.approaches[index] ?? '--') : '--'
+                const lightColor = trafficLightRows[index]?.state ?? '#A9A9A9'
                 const condition = approachStates[index] ?? 'Unavailable'
 
                 return (

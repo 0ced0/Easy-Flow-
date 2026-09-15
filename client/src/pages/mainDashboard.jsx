@@ -13,7 +13,7 @@ import ApproachCards from '../components/approachCards.jsx'
 import SideBar from '../components/sideBar.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import {getStolStatData, 
     getStopStatData, 
     getStocStatData, 
@@ -64,7 +64,8 @@ export default function MainDashboard() {
                 ])
 
     const [trafficForecast, setTrafficForecast] = useState(0)
-    const [trafficLightData, setTrafficLightData] = useState(0)
+    const [trafficTiming, setTrafficTiming] = useState(null)
+    const latestTrafficResponse = useRef({stateVersion: -1, requestStarted: -Infinity})
     const [approachStates, setApproachStates] = useState([])
     const [currentConfiguration, setCurrentConfiguration] = useState([])
     const [timerConfiguration, setTimerConfiguration] = useState(0)
@@ -102,6 +103,7 @@ export default function MainDashboard() {
     useEffect(() => {
         let isRunning = true
         let shortPollTimeout = null
+        let trafficLightPollTimeout = null
         let violationPollTimeout = null
         let chartPollTimeout = null
 
@@ -147,8 +149,29 @@ export default function MainDashboard() {
                     console.info(`[PERF] camera stats: ${(performance.now() - cameraStatsStarted).toFixed(1)}ms`)
                 }
 
-                const trafficStateStarted = performance.now()
+                if (!isRunning) return
+
+                setStopVehicleNumbers(stopStatJson.vehicleCount)
+                setStolVehicleNumbers(stolStatJson.vehicleCount)
+                setStocVehicleNumbers(stocStatJson.vehicleCount)
+                setStosVehicleNumbers(stosStatJson.vehicleCount)
+            } catch (error) {
+                console.error(error)
+            }
+
+            if (isRunning) {
+                shortPollTimeout = window.setTimeout(shortPoll, 2000)
+            }
+        }
+
+        const pollTrafficLight = async () => {
+            if (!isRunning) return
+
+            const requestStarted = Date.now() / 1000
+            const trafficStateStarted = performance.now()
+            try {
                 const tltResponse = await getTrafficLightData()
+                const responseReceived = Date.now() / 1000
                 const tltData = await tltResponse.json()
 
                 if (PERF_LOGGING) {
@@ -157,11 +180,44 @@ export default function MainDashboard() {
 
                 if (!isRunning) return
 
-                setStopVehicleNumbers(stopStatJson.vehicleCount)
-                setStolVehicleNumbers(stolStatJson.vehicleCount)
-                setStocVehicleNumbers(stocStatJson.vehicleCount)
-                setStosVehicleNumbers(stosStatJson.vehicleCount)
-                setTrafficLightData([tltData.trafficLightData, tltData.allowedApproach])
+                const stateVersion = Number(tltData.state_version)
+                if (!Number.isFinite(stateVersion)
+                    || !Number.isFinite(tltData.server_timestamp)
+                    || !Array.isArray(tltData.approaches)) {
+                    throw new Error('Traffic-light response is missing timing metadata')
+                }
+                const isStale = stateVersion < latestTrafficResponse.current.stateVersion
+                    || (stateVersion === latestTrafficResponse.current.stateVersion
+                        && requestStarted < latestTrafficResponse.current.requestStarted)
+                if (isStale) return
+
+                const browserTimeAtServerResponse = (requestStarted + responseReceived) / 2
+                latestTrafficResponse.current = {stateVersion, requestStarted}
+                setTrafficTiming({
+                    approaches: tltData.approaches,
+                    clockOffset: tltData.server_timestamp - browserTimeAtServerResponse,
+                    serverTimestamp: tltData.server_timestamp,
+                    stateVersion,
+                    controllerPhase: tltData.controller_phase,
+                    phaseRemainingSeconds: tltData.phase_remaining_seconds,
+                })
+                if (PERF_LOGGING) {
+                    const estimatedServerNow = Date.now() / 1000
+                        + tltData.server_timestamp - browserTimeAtServerResponse
+                    console.info('[TIMER SYNC]', {
+                        stateVersion,
+                        approaches: tltData.approaches.map((approach) => ({
+                            approach: approach.approach,
+                            backendRemaining: approach.remaining_seconds,
+                            endsAt: approach.ends_at,
+                            localRemaining: Math.max(
+                                0,
+                                approach.remaining_seconds
+                                    - (estimatedServerNow - tltData.server_timestamp),
+                            ),
+                        })),
+                    })
+                }
                 setApproachStates(tltData.state)
                 setCurrentConfiguration(tltData.currentConfiguration)
                 setTimerConfiguration(tltData.currentConfiguration)
@@ -170,7 +226,7 @@ export default function MainDashboard() {
             }
 
             if (isRunning) {
-                shortPollTimeout = window.setTimeout(shortPoll, 2000)
+                trafficLightPollTimeout = window.setTimeout(pollTrafficLight, 1000)
             }
         }
 
@@ -283,12 +339,14 @@ export default function MainDashboard() {
         }
         loadConfiguration()
         shortPoll()
+        pollTrafficLight()
         pollViolations()
         updateChartData()
 
         return () => {
             isRunning = false
             if (shortPollTimeout !== null) clearTimeout(shortPollTimeout)
+            if (trafficLightPollTimeout !== null) clearTimeout(trafficLightPollTimeout)
             if (violationPollTimeout !== null) clearTimeout(violationPollTimeout)
             if (chartPollTimeout !== null) clearTimeout(chartPollTimeout)
         }
@@ -325,7 +383,7 @@ export default function MainDashboard() {
                 {/* MAP */}
                 <div className="relative bg-white text-center h-[41.25vh] min-h-0 md:h-[315px] lg:h-auto lg:min-h-0 lg:flex-1">
                     <TrafficMap>
-                        <ApproachCards approachStates={approachStates} trafficLightData={trafficLightData} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
+                        <ApproachCards approachStates={approachStates} trafficTiming={trafficTiming} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
                     </TrafficMap>
                     <VideoStream />
                 </div>
