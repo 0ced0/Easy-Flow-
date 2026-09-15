@@ -14,10 +14,7 @@ import SideBar from '../components/sideBar.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
-import {getStolStatData, 
-    getStopStatData, 
-    getStocStatData, 
-    getStosStatData, 
+import {getDashboardSnapshot,
     stolUpdateFrontend, 
     stopUpdateFrontend, 
     stocUpdateFrontend, 
@@ -106,6 +103,8 @@ export default function MainDashboard() {
         let trafficLightPollTimeout = null
         let violationPollTimeout = null
         let chartPollTimeout = null
+        let snapshotController = null
+        let latestSnapshotRequest = 0
 
         const loadConfiguration = async () => {
             try {
@@ -130,33 +129,25 @@ export default function MainDashboard() {
         const shortPoll = async () => {
             if (!isRunning) return 
 
+            const requestNumber = ++latestSnapshotRequest
+            snapshotController = new AbortController()
             try {
                 const cameraStatsStarted = performance.now()
-                const [stopStatResponse, stolStatResponse, stocStatResponse, stosStatResponse] = await Promise.all([
-                    getStopStatData(),
-                    getStolStatData(),
-                    getStocStatData(),
-                    getStosStatData(),
-                ])
-                const [stopStatJson, stolStatJson, stocStatJson, stosStatJson] = await Promise.all([
-                    stopStatResponse.json(),
-                    stolStatResponse.json(),
-                    stocStatResponse.json(),
-                    stosStatResponse.json(),
-                ])
+                const snapshotResponse = await getDashboardSnapshot(snapshotController.signal)
+                const snapshot = await snapshotResponse.json()
 
                 if (PERF_LOGGING) {
-                    console.info(`[PERF] camera stats: ${(performance.now() - cameraStatsStarted).toFixed(1)}ms`)
+                    console.info(`[PERF] dashboard snapshot: ${(performance.now() - cameraStatsStarted).toFixed(1)}ms`)
                 }
 
-                if (!isRunning) return
+                if (!isRunning || requestNumber !== latestSnapshotRequest) return
 
-                setStopVehicleNumbers(stopStatJson.vehicleCount)
-                setStolVehicleNumbers(stolStatJson.vehicleCount)
-                setStocVehicleNumbers(stocStatJson.vehicleCount)
-                setStosVehicleNumbers(stosStatJson.vehicleCount)
+                setStolVehicleNumbers(snapshot.cameras.STOL.vehicleCount)
+                setStopVehicleNumbers(snapshot.cameras.STOP.vehicleCount)
+                setStosVehicleNumbers(snapshot.cameras.STOS.vehicleCount)
+                setStocVehicleNumbers(snapshot.cameras.STOC.vehicleCount)
             } catch (error) {
-                console.error(error)
+                if (error.name !== 'AbortError') console.error(error)
             }
 
             if (isRunning) {
@@ -345,6 +336,7 @@ export default function MainDashboard() {
 
         return () => {
             isRunning = false
+            snapshotController?.abort()
             if (shortPollTimeout !== null) clearTimeout(shortPollTimeout)
             if (trafficLightPollTimeout !== null) clearTimeout(trafficLightPollTimeout)
             if (violationPollTimeout !== null) clearTimeout(violationPollTimeout)

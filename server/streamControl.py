@@ -1,4 +1,4 @@
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, jsonify, request
 from pathlib import Path;
 import cv2
 import threading 
@@ -372,6 +372,14 @@ class streamControl:
     
     def getStats(self):
         return self.CV.returnStats()
+
+    def getCurrentSnapshot(self):
+        vehicleCount = self.CV.vehicleCount
+        available = self.running and (self.frame is not None or self.processedFrame is not None)
+        return {
+            "available": available,
+            "vehicleCount": vehicleCount if available else None,
+        }
     
     def updateFrontend(self):
         data = self.CV.returnIntervalData()
@@ -612,6 +620,27 @@ def streamResponse(cameraStream):
         mimetype='multipart/x-mixed-replace; boundary=frame',
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache"},
     )
+
+
+@stream.route('/dashboard_snapshot')
+def dashboardSnapshot():
+    started = time.perf_counter()
+    snapshot = {
+        "server_timestamp": time.time(),
+        "cameras": {
+            "STOL": stolStream.getCurrentSnapshot(),
+            "STOP": stopStream.getCurrentSnapshot(),
+            "STOS": stosStream.getCurrentSnapshot(),
+            "STOC": stocStream.getCurrentSnapshot(),
+        },
+    }
+    response = jsonify(snapshot)
+    if PERF_LOGGING:
+        print(
+            f"[API PERF] dashboard_snapshot total={(time.perf_counter() - started) * 1000:.1f}ms "
+            f"size={response.content_length / 1024:.1f}KB"
+        )
+    return response
 
 
 # SAMBAT TO LSPU APIS

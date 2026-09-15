@@ -1,5 +1,9 @@
 import { BACKEND_BASE_URL } from '../config/backend.js'
 
+export const getDashboardSnapshot = async (signal) => {
+    return fetch(`${BACKEND_BASE_URL}/dashboard_snapshot`, {signal})
+}
+
 // SAMBAT TO PATIMBAO APIS
 
 export const getStopStatData = async () => {
