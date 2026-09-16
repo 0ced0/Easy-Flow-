@@ -8,7 +8,6 @@ import statistics
 dataRequest = Blueprint("dataRequest",__name__)
 def getHourlyData(cameraId, date):
     try:
-        cameraId += 1
         response = dbGetHourlyData(cameraId, date)
         return response
     except ValueError as error:
@@ -17,8 +16,6 @@ def getHourlyData(cameraId, date):
 def getAllRows(cameraId, page, date):
     try:
         allRows = []
-        if cameraId is not None:
-            cameraId += 1
         response = dbGetDataTable(cameraId, page, date)
 
         for row in response:
@@ -43,7 +40,6 @@ def getAllRows(cameraId, page, date):
 
 
 def getMonthlyData(cameraId, month):
-    cameraId += 1
     response = dbGetMonthlyData(cameraId, month)
 
     if response[0].get("total_vehicle_count") is None or response[0].get("average_flow") is None or response[0].get("average_density") is None:
@@ -62,7 +58,6 @@ def getMonthlyData(cameraId, month):
 
 def getDailyData(cameraId, page, month):
     allRows = []
-    cameraId += 1
     response = dbGetDailyData(cameraId, page, month)
     for row in response:
         
@@ -77,7 +72,6 @@ def getDailyData(cameraId, page, month):
 
 def getWeeklyData(cameraId, month):
     weeklyData = []
-    cameraId += 1
     response = dbGetWeeklyData(cameraId, month)
 
     for row in response:

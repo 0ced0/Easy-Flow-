@@ -71,15 +71,17 @@ export default function MainDashboard() {
     const [flowConfiguration, setFlowConfiguration] = useState(0)
     const [violationData, setViolationData] = useState([])
     const [violationDisplay, setViolationDisplay] = useState(null)
+    const [isViolationLoading, setIsViolationLoading] = useState(true)
                 
     const [showDataTable, setShowDataTable] = useState(false)
     const [showTrafficLightControls, setShowTrafficLightControls] = useState(false)
     const [showViolationPopUp, setShowViolationPopUp] = useState(false)
     const [dataTable, setDataTable] = useState([])
     const [currentSummaryData, setCurrentSummaryData] = useState(0)
+    const [isSummaryLoading, setIsSummaryLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [dateFilter, setDateFilter] = useState(null)
-    const [approachFilter, setApproachFilter] = useState(0)
+    const [approachFilter, setApproachFilter] = useState(1)
 
     
     useEffect(() => {
@@ -89,10 +91,17 @@ export default function MainDashboard() {
     }, [showDataTable])
 
     useEffect(() => {
+        setIsSummaryLoading(true)
         const handleSummaryData = async () => {
-            const summaryResponse = await getSummaryData(dateFilter)
-            const summaryData = await summaryResponse.json()
-            setCurrentSummaryData(summaryData) 
+            try {
+                const summaryResponse = await getSummaryData(dateFilter)
+                const summaryData = await summaryResponse.json()
+                setCurrentSummaryData(summaryData)
+            } catch (error) {
+                console.error(error)
+            } finally {
+                setIsSummaryLoading(false)
+            }
         }
 
         handleSummaryData()
@@ -127,6 +136,8 @@ export default function MainDashboard() {
                 setTimerConfiguration(trafficLightData.currentConfiguration)
             } catch (error) {
                 console.error(error)
+            } finally {
+                if (isRunning) setIsViolationLoading(false)
             }
         }
         
@@ -216,7 +227,7 @@ export default function MainDashboard() {
                 if (!isRunning) return
 
                 setViolationData(violationData)
-                setViolationDisplay((currentViolation) => currentViolation)
+                setViolationDisplay((currentViolation) => currentViolation ?? violationData[0] ?? null)
             } catch (error) {
                 console.error(error)
             }
@@ -343,7 +354,7 @@ export default function MainDashboard() {
             <SideBar compact />
             <div className="order-2 md:order-none w-full h-48 shrink-0 md:w-[16.5vw] md:min-w-45 md:h-full md:min-h-0 md:shrink-0 flex flex-col justify-between overflow-hidden bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                 {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
-                <ViolationMonitoring violationData={violationData} setViolationDisplay={setViolationDisplay} />
+                <ViolationMonitoring violationData={violationData} setViolationDisplay={setViolationDisplay} isLoading={isViolationLoading} />
             </div>
             
 
@@ -361,7 +372,7 @@ export default function MainDashboard() {
                 {/* VIOLATION AND LINECHART */}
                 <div className="flex flex-col mb-1.5 sm:mb-0 lg:flex-row lg:h-[clamp(172.5px,21dvh,225px)] lg:min-h-0 lg:flex-none gap-1.5 lg:space-x-1.5 overflow-hidden">
                     <div className="order-3 lg:order-none bg-white min-h-42 lg:h-full lg:min-h-0 min-w-0 flex-1 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                        <ViolationDataDisplay violationDisplay={violationDisplay}/>
+                        <ViolationDataDisplay violationDisplay={violationDisplay} isLoading={isViolationLoading}/>
                     </div>
                     <div className="order-1 lg:order-none bg-white min-h-[18rem] sm:min-h-[16.5rem] lg:h-full lg:min-h-0 min-w-0 flex-2 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
                         <StatCard approachFilter={approachFilter} setApproachFilter={setApproachFilter} setDateFilter={setDateFilter} dateFilter={dateFilter} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
@@ -369,7 +380,7 @@ export default function MainDashboard() {
 
                     {/* SUMMARY */}
                     <div className="order-2 lg:order-none flex-1 min-h-48 lg:h-full lg:min-h-0 min-w-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                        <SummaryCard currentSummaryData={currentSummaryData} flowConfiguration={flowConfiguration} densityConfiguration={densityConfiguration}/>
+                        <SummaryCard currentSummaryData={currentSummaryData} flowConfiguration={flowConfiguration} densityConfiguration={densityConfiguration} isLoading={isSummaryLoading || densityConfiguration?.length < 4 || flowConfiguration?.length < 4}/>
                     </div>
                 </div>
             </div>

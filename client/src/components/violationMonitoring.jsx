@@ -1,6 +1,16 @@
 // import "../styles/violationMonitoring.css"
 
-export default function ViolationMonitoring ({violationData, setViolationDisplay}) {
+export default function ViolationMonitoring ({violationData, setViolationDisplay, isLoading}) {
+
+    if (isLoading) {
+        return (
+            <div className="violationBox h-full overflow-hidden mt-auto p-2 space-y-2 animate-pulse">
+                {[1, 2, 3, 4].map((row) => (
+                    <div key={row} className="h-10 rounded bg-slate-200/70"></div>
+                ))}
+            </div>
+        )
+    }
 
     try{
         return(

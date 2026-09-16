@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react'
 
-export default function SummaryCard ({currentSummaryData, flowConfiguration, densityConfiguration}) {
+export default function SummaryCard ({currentSummaryData, flowConfiguration, densityConfiguration, isLoading}) {
     const [trafficState, setTrafficState] = useState([])
 
     const stateColor = {
@@ -51,6 +51,17 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
             ])
         }
     }, [currentSummaryData, flowConfiguration, densityConfiguration])
+
+    if (isLoading) {
+        return (
+            <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 p-[0.5625rem] lg:p-[0.375rem] animate-pulse">
+                <div className="h-8 rounded bg-slate-200/70"></div>
+                <div className="mt-[0.28125rem] flex-1 rounded bg-slate-200/50 p-3 space-y-3">
+                    {[1, 2, 3, 4].map((row) => <div key={row} className="h-3 rounded bg-slate-200/70"></div>)}
+                </div>
+            </div>
+        )
+    }
 
     return(
     <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 z-10 overflow-hidden lg:overflow-y-auto">

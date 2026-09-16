@@ -1,42 +1,19 @@
-import {getAllRows, getTrafficData} from "../hooks/api"
-import {useEffect, useState, useRef} from "react"
+import {getDailyData} from "../hooks/api"
 
-export default function DataTable({setCamera_id, dataTable, tableId, setDailyData, setPage, page}) {
+export default function DataTable({cameraId, dataTable, setDailyData, setPage, page, monthFilter}) {
     try{
-        const [dateFilter, setDateFilter] = useState(null)
-
-        const nextPage = page + 1
-        const prevPage = page - 1
-
         const handlePage = async (action) => {
-            if (action === 1){
-                const response = await getAllRows(tableId, nextPage, dateFilter)
-                const data = await response.json()
-                
-                if (data.length >= 1){
-                    setDailyData(data)
-                    setPage(prev => nextPage)
-                }
-            }
-            else if (action === 0 && page > 1){
-                const response = await getAllRows(tableId, prevPage, dateFilter)
-                const data = await response.json()
-                
-                if (data.length >= 1){
-                    setPage(prevPage)
-                    setDailyData(data)
-                } 
-            }
-        }
+            const targetPage = page + action
+            if (targetPage < 1) return
 
-        const handleDateFilter = async (event) => {
-            try{
-                setDateFilter(event.target.value)
-                setPage(1)
-                const response = await getTrafficData(tableId, 1, event.target.value)
+            try {
+                const response = await getDailyData(cameraId, targetPage, monthFilter)
                 const data = await response.json()
-                setDailyData(data)
-            }catch(error){
+                if (data.length >= 1){
+                    setDailyData(data)
+                    setPage(targetPage)
+                }
+            } catch (error) {
                 console.error(error)
             }
         }
@@ -85,7 +62,7 @@ export default function DataTable({setCamera_id, dataTable, tableId, setDailyDat
                         }
                     </div>
                     <div className="absolute top-[0.1875rem] right-[0.5625rem] sm:right-[1.875rem] flex justify-center mt-1.5 gap-[0.5625rem] sm:gap-6 items-center text-[0.85rem]">
-                        <button onClick={() => {handlePage(0)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-[0.1875rem] hover:bg-black/20 hover:shadow-none">
+                        <button onClick={() => {handlePage(-1)}} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-[0.1875rem] hover:bg-black/20 hover:shadow-none">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-[1.125rem]">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                             </svg>

@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {getViolationEvidence} from '../hooks/api.js'
 
-export default function ViolationDataDisplay({violationDisplay}) {
+export default function ViolationDataDisplay({violationDisplay, isLoading}) {
     const [evidence, setEvidence] = useState({ violationId: null, frame: null })
     const violationId = violationDisplay?.id
 
@@ -16,6 +16,7 @@ export default function ViolationDataDisplay({violationDisplay}) {
             })
             .catch((error) => {
                 if (error.name !== 'AbortError') console.error(error)
+                if (active) setEvidence({ violationId, frame: null })
             })
         return () => {
             active = false
@@ -26,6 +27,17 @@ export default function ViolationDataDisplay({violationDisplay}) {
     const approach=["Sambat to LSPU", "Sambat to Patimbao", "Sambat to SunStar", "Sambat to Complex"]
     const violations=["Illegal Loading/Unloading", "Illegal Parking"]
     const frame = evidence.violationId === violationId ? evidence.frame : null
+    const isEvidenceLoading = Boolean(violationId) && evidence.violationId !== violationId
+
+    if (isLoading || isEvidenceLoading) {
+        return (
+            <div className="h-full min-h-0 min-w-0 p-2 animate-pulse">
+                <div className="h-8 rounded bg-slate-200/70"></div>
+                <div className="mt-2 h-[calc(100%-2.5rem)] rounded bg-slate-200/50"></div>
+            </div>
+        )
+    }
+
     return(
             <div className="h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
                 <div className="flex shrink-0 justify-between px-1.5 border-b border-[#D3D3D3] min-h-9">
