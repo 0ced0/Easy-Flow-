@@ -1,4 +1,4 @@
-export default function TriSummaryCard ({dataCategory, summaryValue, previousValue, comparisonMonth}) {
+export default function TriSummaryCard ({dataCategory, summaryValue, previousValue, comparisonMonth, isLoading}) {
     const currentAmount = Number(summaryValue)
     const previousAmount = Number(previousValue)
     const hasCurrentData = Number.isFinite(currentAmount)
@@ -9,6 +9,18 @@ export default function TriSummaryCard ({dataCategory, summaryValue, previousVal
     const statusStroke = status === "Increased" ? "#9333EA" : status === "Decreased" ? "#ffb700" : "#737373"
 
     try{    
+        if (isLoading) {
+            return (
+                <div className="flex flex-col h-full w-full p-[0.5625rem] sm:p-[0.75rem] animate-pulse">
+                    <div className="m-1.5 sm:m-3 h-3.5 w-2/3 rounded bg-slate-200" />
+                    <div className="mt-auto flex items-end justify-between p-1.5 sm:p-3">
+                        <div className="h-8 w-1/3 rounded bg-slate-200" />
+                        <div className="h-3 w-1/4 rounded bg-slate-200" />
+                    </div>
+                </div>
+            )
+        }
+
         return(
             <>
             {hasCurrentData ? (

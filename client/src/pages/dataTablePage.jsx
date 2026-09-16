@@ -4,7 +4,6 @@ import {useState, useEffect, useRef} from 'react'
 import {getMonthlyData, getDailyData, getWeeklyData} from '../hooks/api.js'
 import TriSUmmaryCard from '../components/triSummaryCards.jsx'
 import SummaryChart from '../components/summaryChart.jsx'
-import PageLoading from '../components/pageLoading.jsx'
 
 function getPreviousMonth(month) {
     const [year, monthNumber] = month.split("-").map(Number)
@@ -113,9 +112,6 @@ export default function DataTablePage() {
         return(
             <div className="p-[0.1875rem] pb-15 md:pb-[0.1875rem] flex flex-col md:flex-row w-full h-[100dvh] box-border overflow-x-hidden overflow-y-auto md:overflow-hidden">
                 <SideBar compact />
-                {isSummaryLoading || isDailyLoading ? (
-                    <PageLoading message="Loading traffic data..." />
-                ) : (
                 <div className="w-full h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col py-[0.5625rem] px-[0.5625rem] sm:px-[1.125rem] md:py-[0.75rem] lg:px-[1.875rem] overflow-visible md:h-full md:overflow-hidden">
                     <div className="relative shrink-0 flex flex-wrap items-center gap-1.5 justify-between mb-[0.5625rem] md:mb-[0.375rem]">
                         <h1 className="w-full sm:w-auto font-medium text-[black]/70 text-[0.9375rem] sm:text-[1.275rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
@@ -138,28 +134,27 @@ export default function DataTablePage() {
                     
                     <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-[0.5625rem] md:gap-[0.9375rem] px-1.5 sm:px-3 py-1.5 h-auto md:h-[clamp(120px,25dvh,215px)] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
                         <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[0]} summaryValue={summaryData?.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
+                            <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[0]} summaryValue={summaryData?.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                         <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[1]} summaryValue={summaryData?.averageVehicleFlow} previousValue={previousSummaryData?.averageVehicleFlow} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
+                            <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[1]} summaryValue={summaryData?.averageVehicleFlow} previousValue={previousSummaryData?.averageVehicleFlow} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                         <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <TriSUmmaryCard dataCategory={dataCategory[2]} summaryValue={summaryData?.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
+                            <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[2]} summaryValue={summaryData?.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 py-1.5 gap-3 h-auto flex-none md:flex-1 md:min-h-0">
                         {/* DATA TABLE */}
                         <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden lg:pr-[0.5625rem] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                            <DataTable cameraId={camera_id} dataTable={dailyData} setDailyData={setDailyData} setPage={setPage} page={page} monthFilter={monthFilter}/>
+                            <DataTable cameraId={camera_id} dataTable={dailyData} setDailyData={setDailyData} setPage={setPage} page={page} monthFilter={monthFilter} isLoading={isDailyLoading} setIsLoading={setIsDailyLoading}/>
                         </div>
                         <div className="h-[15rem] sm:h-[16.5rem] md:h-full min-h-0 min-w-0 bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-[0.5625rem] p-1.5 sm:p-[0.5625rem] overflow-hidden">
                             <div className="h-full min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded w-full">
-                                <SummaryChart weeklyData={weeklyData}/>
+                                <SummaryChart weeklyData={weeklyData} isLoading={isSummaryLoading}/>
                             </div>
                         </div>
                     </div>
                 </div>
-                )}
             </div>
         )
     }catch(error){

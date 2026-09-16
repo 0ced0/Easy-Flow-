@@ -136,8 +136,6 @@ export default function MainDashboard() {
                 setTimerConfiguration(trafficLightData.currentConfiguration)
             } catch (error) {
                 console.error(error)
-            } finally {
-                if (isRunning) setIsViolationLoading(false)
             }
         }
         
@@ -230,6 +228,8 @@ export default function MainDashboard() {
                 setViolationDisplay((currentViolation) => currentViolation ?? violationData[0] ?? null)
             } catch (error) {
                 console.error(error)
+            } finally {
+                if (isRunning) setIsViolationLoading(false)
             }
 
             if (isRunning) {

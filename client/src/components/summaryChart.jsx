@@ -1,7 +1,20 @@
 import {Tooltip, Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid} from 'recharts'
 
-export default function SummaryChart ({weeklyData}) {
+export default function SummaryChart ({weeklyData, isLoading}) {
     try{
+    if (isLoading) {
+        return (
+            <div className="h-full min-h-0 flex flex-col gap-[0.9375rem] p-[0.9375rem] animate-pulse">
+                <div className="h-4 w-2/3 rounded bg-slate-200" />
+                <div className="flex flex-1 items-end gap-3 px-3">
+                    {[35, 60, 45, 75, 55, 90].map((height, index) => (
+                        <div key={index} className="flex-1 rounded-t bg-slate-200" style={{height: `${height}%`}} />
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="h-full min-h-0 flex flex-col gap-[0.5625rem] sm:gap-[0.9375rem] py-[0.5625rem] px-[0.375rem] sm:px-[0.9375rem]">
             <h1 className="shrink-0 text-[0.75rem] sm:text-[1.125rem] text-black/70">

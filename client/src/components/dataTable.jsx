@@ -1,12 +1,13 @@
 import {getDailyData} from "../hooks/api"
 
-export default function DataTable({cameraId, dataTable, setDailyData, setPage, page, monthFilter}) {
+export default function DataTable({cameraId, dataTable, setDailyData, setPage, page, monthFilter, isLoading, setIsLoading}) {
     try{
         const handlePage = async (action) => {
             const targetPage = page + action
             if (targetPage < 1) return
 
             try {
+                setIsLoading(true)
                 const response = await getDailyData(cameraId, targetPage, monthFilter)
                 const data = await response.json()
                 if (data.length >= 1){
@@ -15,10 +16,29 @@ export default function DataTable({cameraId, dataTable, setDailyData, setPage, p
                 }
             } catch (error) {
                 console.error(error)
+                setIsLoading(false)
             }
         }
          
         // console.log(dataTable)
+
+        if (isLoading) {
+            return(
+                <div className="h-full p-[0.5625rem] sm:p-[0.9375rem] animate-pulse">
+                    <div className="h-5 w-1/3 rounded bg-slate-200" />
+                    <div className="mt-6 grid grid-cols-4 gap-3">
+                        {Array.from({length: 6}, (_, index) => (
+                            <div key={index} className="col-span-4 grid grid-cols-4 gap-3">
+                                <div className="h-3 rounded bg-slate-200" />
+                                <div className="h-3 rounded bg-slate-200" />
+                                <div className="h-3 rounded bg-slate-200" />
+                                <div className="h-3 rounded bg-slate-200" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )
+        }
 
         return(
             <div className="relative h-full min-h-0 min-w-0 flex flex-col">
