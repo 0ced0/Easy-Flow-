@@ -2,11 +2,18 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMap } from 'react-leaflet'
 
-const cardOffsets = [
+const desktopCardOffsets = [
     [0.44, 0.38],
     [0.60, 0.42],
     [0.54, 0.66],
     [0.38, 0.62],
+]
+
+const mobileCardOffsets = [
+    [0.48, 0.20],
+    [0.78, 0.43],
+    [0.52, 0.76],
+    [0.20, 0.54],
 ]
 
 const statusColors = {
@@ -54,11 +61,12 @@ function useLocalTrafficCountdown(trafficTiming) {
 export default function ApproachCards({approachStates, trafficTiming, stolStatData, stopStatData, stocStatData, stosStatData}) {
     const map = useMap()
     const pane = map.getPane('overlayPane')
-    const [positions] = useState(() => {
-        const size = map.getSize()
-        return cardOffsets.map(([x, y]) => map.containerPointToLatLng([size.x * x, size.y * y]))
-    })
     const [, setMapVersion] = useState(0)
+    const size = map.getSize()
+    const cardOffsets = size.x < 768 ? mobileCardOffsets : desktopCardOffsets
+    const positions = cardOffsets.map(([x, y]) => (
+        map.containerPointToLatLng([size.x * x, size.y * y])
+    ))
     const trafficLightRows = trafficTiming?.approaches ?? []
     const localTimers = useLocalTrafficCountdown(trafficTiming)
     const cards = [
@@ -71,8 +79,12 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
     useEffect(() => {
         const updateCardCoordinates = () => setMapVersion((version) => version + 1)
         map.on('zoomend', updateCardCoordinates)
+        map.on('resize', updateCardCoordinates)
 
-        return () => map.off('zoomend', updateCardCoordinates)
+        return () => {
+            map.off('zoomend', updateCardCoordinates)
+            map.off('resize', updateCardCoordinates)
+        }
     }, [map])
 
     if (!pane) return null

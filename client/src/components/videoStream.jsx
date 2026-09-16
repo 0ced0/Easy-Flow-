@@ -16,7 +16,7 @@ export const VideoStream = () => {
     const streamUrl = (camera, variant) => `${BACKEND_BASE_URL}/${camera.stream}?variant=${variant}`
 
     return (
-        <section className="hidden md:grid grid-rows-[1.3fr_0.7fr] absolute p-0.5 bg-black/70 top-0 right-0 z-300 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] md:w-[clamp(14rem,20vw,24rem)] md:aspect-[4/3]" aria-label="CCTV camera feeds">
+        <section className="grid grid-rows-[1.3fr_0.7fr] absolute p-0.5 bg-black/70 top-1 right-1 z-300 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] w-[clamp(8rem,34vw,11rem)] aspect-[4/3] md:top-0 md:right-0 md:w-[clamp(14rem,20vw,24rem)]" aria-label="CCTV camera feeds">
             <div className="relative min-h-0 min-w-0 overflow-hidden">
                 <img key={`${selectedCamera.id}-main`} src={streamUrl(selectedCamera, 'main')} alt={`${selectedCamera.label} live camera`} className="h-full w-full object-cover" />
                 <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">{selectedCamera.label}</span>
