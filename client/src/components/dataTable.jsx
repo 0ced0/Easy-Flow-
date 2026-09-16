@@ -1,6 +1,13 @@
 import {getDailyData} from "../hooks/api"
+import {useEffect, useState} from "react"
 
 export default function DataTable({cameraId, dataTable, setDailyData, setPage, page, monthFilter, isLoading, setIsLoading}) {
+    const [hasNextPage, setHasNextPage] = useState(true)
+
+    useEffect(() => {
+        setHasNextPage(true)
+    }, [cameraId, monthFilter, page])
+
     try{
         const handlePage = async (action) => {
             const targetPage = page + action
@@ -13,6 +20,9 @@ export default function DataTable({cameraId, dataTable, setDailyData, setPage, p
                 if (data.length >= 1){
                     setDailyData(data)
                     setPage(targetPage)
+                } else {
+                    setHasNextPage(false)
+                    setIsLoading(false)
                 }
             } catch (error) {
                 console.error(error)
@@ -92,7 +102,7 @@ export default function DataTable({cameraId, dataTable, setDailyData, setPage, p
                         {/* <div className="">2</div>
                         <div className="">3</div> */}
 
-                        <button onClick={() => handlePage(1)} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-[0.1875rem] hover:bg-black/20 hover:shadow-none">
+                        <button disabled={!hasNextPage} onClick={() => handlePage(1)} className="shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] p-[0.1875rem] hover:bg-black/20 hover:shadow-none disabled:cursor-not-allowed disabled:opacity-40">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-[1.125rem]">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                             </svg>

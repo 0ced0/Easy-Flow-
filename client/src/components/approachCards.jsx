@@ -62,10 +62,10 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
     const trafficLightRows = trafficTiming?.approaches ?? []
     const localTimers = useLocalTrafficCountdown(trafficTiming)
     const cards = [
-        {label: 'Sambat to LSPU', data: stolStatData, position: 0},
-        {label: 'Sambat to Patimbao', data: stopStatData, position: 1},
-        {label: 'Sambat to Sunstar', data: stosStatData, position: 2},
-        {label: 'Sambat to Complex', data: stocStatData, position: 3},
+        {label: 'Sambat to LSPU', data: stolStatData, position: 0, approachIndex: 0},
+        {label: 'Sambat to Patimbao', data: stopStatData, position: 1, approachIndex: 1},
+        {label: 'Sambat to Sunstar', data: stosStatData, position: 3, approachIndex: 3},
+        {label: 'Sambat to Complex', data: stocStatData, position: 2, approachIndex: 2},
     ]
 
     useEffect(() => {
@@ -79,11 +79,11 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
 
     return createPortal(
         <>
-            {cards.map((card, index) => {
-                const point = map.latLngToLayerPoint(positions[index])
-                const timer = trafficLightRows.length ? (localTimers[index] ?? '--') : '--'
-                const lightColor = trafficLightRows[index]?.state ?? '#A9A9A9'
-                const condition = approachStates[index] ?? 'Unavailable'
+            {cards.map((card) => {
+                const point = map.latLngToLayerPoint(positions[card.position])
+                const timer = trafficLightRows.length ? (localTimers[card.approachIndex] ?? '--') : '--'
+                const lightColor = trafficLightRows[card.approachIndex]?.state ?? '#A9A9A9'
+                const condition = approachStates[card.approachIndex] ?? 'Unavailable'
 
                 return (
                     <div key={card.label} style={{left: point.x, top: point.y, pointerEvents: 'auto'}} className="absolute -translate-x-1/2 -translate-y-1/2">

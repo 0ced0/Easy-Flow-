@@ -139,8 +139,8 @@ class streamControl:
         return cap
 
     def currentApproachSignalState(self):
-        # Camera construction order follows the controller's A-D approach order.
-        approachByCamera = {1: "A", 2: "B", 3: "C", 4: "D"}
+        # Controller phases follow the physical approach order: 1, 2, 4, 3.
+        approachByCamera = {1: "A", 2: "B", 3: "D", 4: "C"}
         approach = approachByCamera.get(self.CV.cameraId)
         for light in TLC.trafficLightData:
             if len(light) >= 3 and light[2] == approach:

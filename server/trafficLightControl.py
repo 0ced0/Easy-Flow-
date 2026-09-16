@@ -13,6 +13,10 @@ CLEARANCE_SECONDS = YELLOW_SECONDS + ALL_RED_SECONDS
 assert CLEARANCE_SECONDS == 6
 TLC_TRACE = os.environ.get("EASYFLOW_TLC_TRACE", "").strip().lower() == "true"
 
+# Database camera IDs remain stable. Controller phases use the physical
+# intersection order rather than numeric camera-ID order.
+CONTROLLER_CAMERA_IDS = (1, 2, 4, 3)
+
 intersectionTimers = Blueprint("intersectionTimers", __name__)
 
 def trafficThresholds(traffic):
@@ -105,28 +109,33 @@ class trafficLightControls:
         slowdownTimers = self.currentConfiguration["slowdown"]
         congestedTimers = self.currentConfiguration["congested"]
 
-        for row in intersectionData:
+        if len(intersectionData) != len(CONTROLLER_CAMERA_IDS):
+            with self.stateLock:
+                self.states = ["Unavailable"] * len(CONTROLLER_CAMERA_IDS)
+            return [freeflowTimers[cameraId - 1] for cameraId in CONTROLLER_CAMERA_IDS]
+
+        for approach, row in enumerate(intersectionData):
+            cameraId = CONTROLLER_CAMERA_IDS[approach]
+            configurationIndex = cameraId - 1
             density = int(row["spatial_density"])
             timerAllocation = 0
             trafficState = None
-            if  density <= densityConfiguration[approach]["freeflow_max"]:
-                timerAllocation = freeflowTimers[approach]
+            if  density <= densityConfiguration[configurationIndex]["freeflow_max"]:
+                timerAllocation = freeflowTimers[configurationIndex]
                 trafficState = "FREE FLOW"
 
-            elif density >= densityConfiguration[approach]["freeflow_max"] + 1 and density <= densityConfiguration[approach]["slowdown_max"]:
-                timerAllocation = slowdownTimers[approach]
+            elif density >= densityConfiguration[configurationIndex]["freeflow_max"] + 1 and density <= densityConfiguration[configurationIndex]["slowdown_max"]:
+                timerAllocation = slowdownTimers[configurationIndex]
                 trafficState = "SLOWDOWN"
 
-            elif density >= densityConfiguration[approach]["slowdown_max"] + 1:
-                timerAllocation = congestedTimers[approach]
+            elif density >= densityConfiguration[configurationIndex]["slowdown_max"] + 1:
+                timerAllocation = congestedTimers[configurationIndex]
                 trafficState = "CONGESTED"
 
             timers[approach] = {
                 "timerAllocation" : timerAllocation,
                 "trafficState" : trafficState 
                 }
-            approach += 1
-
         cycle = [timers[0]["timerAllocation"], timers[1]["timerAllocation"], timers[2]["timerAllocation"], timers[3]["timerAllocation"]] 
         with self.stateLock:
             self.states = [timers[0]["trafficState"], timers[1]["trafficState"], timers[2]["trafficState"], timers[3]["trafficState"]]
@@ -135,13 +144,12 @@ class trafficLightControls:
         
     def getIntersectionData(self):
         self.intersectionData = getForecastIntervals(lag=1)
-        stolApproach = self.intersectionData[0]
-        stopApproach = self.intersectionData[1]
-        stosApproach = self.intersectionData[2]
-        stocApproach = self.intersectionData[3]
-
-        compiledDensity = [stolApproach, stopApproach, stosApproach, stocApproach] 
-        return compiledDensity
+        dataByCameraId = {
+            row["camera_id"]: row for row in self.intersectionData
+        }
+        if not all(cameraId in dataByCameraId for cameraId in CONTROLLER_CAMERA_IDS):
+            return []
+        return [dataByCameraId[cameraId] for cameraId in CONTROLLER_CAMERA_IDS]
 
     def initializeTimers(self):
 

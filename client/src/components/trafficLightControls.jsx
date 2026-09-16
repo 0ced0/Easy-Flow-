@@ -41,19 +41,19 @@ function TrafficLightControlsForm({
         },
 
         {
-            approach_id: 3,
-            approach_name: "Sambat - Sunstar",
-            freeflow: timerConfiguration.freeflow[2],
-            slowdown: timerConfiguration.slowdown[2],
-            congested: timerConfiguration.congested[2]
-        },
-
-        {
             approach_id: 4,
             approach_name: "Sambat - Complex",
             freeflow: timerConfiguration.freeflow[3],
             slowdown: timerConfiguration.slowdown[3],
             congested: timerConfiguration.congested[3]
+        },
+
+        {
+            approach_id: 3,
+            approach_name: "Sambat - Sunstar",
+            freeflow: timerConfiguration.freeflow[2],
+            slowdown: timerConfiguration.slowdown[2],
+            congested: timerConfiguration.congested[2]
         }
         ])
 
@@ -71,16 +71,16 @@ function TrafficLightControlsForm({
                 "slowdown_max": densityConfiguration[1].slowdown_max
             },
             {
-                "approach_id": 3,
-                "approach_name": "Sambat - Sunstar",
-                "freeflow_max": densityConfiguration[2].freeflow_max,
-                "slowdown_max": densityConfiguration[2].slowdown_max
-            },
-            {
                 "approach_id": 4,
                 "approach_name": "Sambat - Complex",
                 "freeflow_max": densityConfiguration[3].freeflow_max,
                 "slowdown_max": densityConfiguration[3].slowdown_max
+            },
+            {
+                "approach_id": 3,
+                "approach_name": "Sambat - Sunstar",
+                "freeflow_max": densityConfiguration[2].freeflow_max,
+                "slowdown_max": densityConfiguration[2].slowdown_max
             }
         ])
 
@@ -98,16 +98,16 @@ function TrafficLightControlsForm({
                 "slowdown_max": flowConfiguration[1].slowdown_max
             },
             {
-                "approach_id": 3,
-                "approach_name": "Sambat - Sunstar",
-                "freeflow_max": flowConfiguration[2].freeflow_max,
-                "slowdown_max": flowConfiguration[2].slowdown_max
-            },
-            {
                 "approach_id": 4,
                 "approach_name": "Sambat - Complex",
                 "freeflow_max": flowConfiguration[3].freeflow_max,
                 "slowdown_max": flowConfiguration[3].slowdown_max
+            },
+            {
+                "approach_id": 3,
+                "approach_name": "Sambat - Sunstar",
+                "freeflow_max": flowConfiguration[2].freeflow_max,
+                "slowdown_max": flowConfiguration[2].slowdown_max
             }
         ])
 

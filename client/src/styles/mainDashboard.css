@@ -169,6 +169,13 @@
     color: #363636;
 }
 
+@media (min-width: 1024px) {
+    .card {
+        transform: scale(1.15);
+        transform-origin: center;
+    }
+}
+
 
 /* SIDEBAR STYLES  */
 .sideBarIcons {
