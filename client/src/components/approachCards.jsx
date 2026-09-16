@@ -16,7 +16,7 @@ const statusColors = {
 }
 
 function useLocalTrafficCountdown(trafficTiming) {
-    const [timers, setTimers] = useState({approaches: [], phase: null})
+    const [timers, setTimers] = useState([])
 
     useEffect(() => {
         const approaches = trafficTiming?.approaches
@@ -35,15 +35,11 @@ function useLocalTrafficCountdown(trafficTiming) {
                     approach.remaining_seconds - (estimatedServerNow - serverTimestamp),
                 ),
             ))
-            const phaseRemaining = Number.isFinite(trafficTiming.phaseRemainingSeconds)
-                ? Math.max(0, Math.ceil(trafficTiming.phaseRemainingSeconds - (estimatedServerNow - serverTimestamp)))
-                : null
             setTimers((currentTimers) => (
-                currentTimers.phase === phaseRemaining
-                && currentTimers.approaches.length === nextApproachTimers.length
-                && currentTimers.approaches.every((timer, index) => timer === nextApproachTimers[index])
+                currentTimers.length === nextApproachTimers.length
+                && currentTimers.every((timer, index) => timer === nextApproachTimers[index])
                     ? currentTimers
-                    : {approaches: nextApproachTimers, phase: phaseRemaining}
+                    : nextApproachTimers
             ))
         }
 
@@ -65,7 +61,6 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
     const [, setMapVersion] = useState(0)
     const trafficLightRows = trafficTiming?.approaches ?? []
     const localTimers = useLocalTrafficCountdown(trafficTiming)
-    const controllerPhase = trafficTiming?.controllerPhase
     const cards = [
         {label: 'Sambat to LSPU', data: stolStatData, position: 0},
         {label: 'Sambat to Patimbao', data: stopStatData, position: 1},
@@ -86,11 +81,7 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
         <>
             {cards.map((card, index) => {
                 const point = map.latLngToLayerPoint(positions[index])
-                const timer = controllerPhase === 'all-red'
-                    ? (localTimers.phase ?? '--')
-                    : controllerPhase === 'yellow' && trafficLightRows[index]?.state === 'yellow'
-                        ? (localTimers.phase ?? '--')
-                        : trafficLightRows.length ? (localTimers.approaches[index] ?? '--') : '--'
+                const timer = trafficLightRows.length ? (localTimers[index] ?? '--') : '--'
                 const lightColor = trafficLightRows[index]?.state ?? '#A9A9A9'
                 const condition = approachStates[index] ?? 'Unavailable'
 

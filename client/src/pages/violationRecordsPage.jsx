@@ -29,25 +29,32 @@ export default function ViolationRecordsPage() {
     const [error, setError] = useState('')
 
     useEffect(() => {
+        const controller = new AbortController()
+        let active = true
         const loadViolations = async () => {
             setIsLoading(true)
             setError('')
             try {
-                const response = await getPaginatedViolationData(page, search, typeFilter)
+                const response = await getPaginatedViolationData(page, search, typeFilter, controller.signal, false)
                 if (!response?.ok) throw new Error('Unable to load violation records.')
                 const data = await response.json()
+                if (!active) return
                 setViolations(data.violations)
                 setSelectedViolation(data.violations[0] || null)
                 setTotalViolations(data.total)
                 setCounts(data.counts)
             } catch (requestError) {
-                setError(requestError.message)
+                if (requestError.name !== 'AbortError' && active) setError(requestError.message)
             } finally {
-                setIsLoading(false)
+                if (active) setIsLoading(false)
             }
         }
 
         loadViolations()
+        return () => {
+            active = false
+            controller.abort()
+        }
     }, [page, search, typeFilter])
 
     const totalPages = Math.max(Math.ceil(totalViolations / PAGE_SIZE), 1)

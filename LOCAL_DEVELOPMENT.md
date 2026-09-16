@@ -11,7 +11,7 @@ It does not use the live CCTV URLs.
 - a separate Flask backend at `http://127.0.0.1:5000`; and
 - the four test videos from `server/videoData`.
 
-The local backend uses these files:
+By default, the launcher configures these files:
 
 - `sambat_to_lspu.mp4`
 - `sambat_to_patimbao.mp4`
@@ -36,8 +36,8 @@ serves the dashboard data, traffic-light settings, and violations.
 From the repository root, run:
 
 ```powershell
-$env:DB_USER = "your_mysql_user"
-$env:DB_PASSWORD = "your_mysql_password"
+$env:DB_USER = "root"
+$env:DB_PASSWORD = ""
 npm run dev:local
 ```
 
@@ -46,6 +46,20 @@ Optional database connection settings:
 ```powershell
 $env:DB_HOST = "127.0.0.1"
 ```
+
+To use other recordings, set one or more source variables before starting. The same
+recording may be assigned to more than one approach for UI/performance development.
+
+```powershell
+$env:EASYFLOW_STOL_VIDEO = "C:\videos\stol.mp4"
+$env:EASYFLOW_STOP_VIDEO = "C:\videos\stop.mp4"
+$env:EASYFLOW_STOS_VIDEO = "C:\videos\stos.mp4"
+$env:EASYFLOW_STOC_VIDEO = "C:\videos\stoc.mp4"
+```
+
+The launcher resolves and verifies all four paths, then passes them to the backend.
+When starting `server/local_app.py` directly, all four `EASYFLOW_*_VIDEO` variables
+are required.
 
 The launcher always uses `easyflow_local`. It refuses a non-local database host and
 refuses to start if municipal CCTV environment variables are set.
@@ -60,6 +74,10 @@ The local launcher validates and sets:
 ```text
 EASYFLOW_ENV=local
 EASYFLOW_VIDEO_SOURCE=local
+EASYFLOW_STOL_VIDEO=<local MP4 path>
+EASYFLOW_STOP_VIDEO=<local MP4 path>
+EASYFLOW_STOS_VIDEO=<local MP4 path>
+EASYFLOW_STOC_VIDEO=<local MP4 path>
 ENABLE_SUMO=false
 DB_NAME=easyflow_local
 ```
@@ -81,8 +99,26 @@ opened by the launcher.
 
 | Problem | What to check |
 | --- | --- |
-| `DB_USER and DB_PASSWORD ... must be set` | Set both variables in the PowerShell session before running the command. |
+| Database authentication errors | XAMPP's default local account is `root` with an empty password. Confirm MariaDB is running and that its local credentials match. |
 | Database connection errors | Confirm MySQL is running, the credentials work, and `easyflow_local` has the required schema and seed rows. |
 | `Missing local test video files` | Confirm all four MP4 files are present in `server/videoData`. |
 | Port already in use | Stop the existing Vite process on port 5173 or Flask process on port 5000, then run the launcher again. |
 | Empty dashboard/configuration errors | The local database is missing initial Easy-Flow configuration data; load the seed/configuration rows. |
+
+
+
+
+
+
+
+
+
+# KILL PROCESS
+Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess |
+    ForEach-Object { Stop-Process -Id $_ -Force }
+
+
+Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess |
+    ForEach-Object { Stop-Process -Id $_ -Force }

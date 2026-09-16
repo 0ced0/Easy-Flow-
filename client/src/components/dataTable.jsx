@@ -1,4 +1,4 @@
-import {getAllRows} from "../hooks/api" 
+import {getAllRows, getTrafficData} from "../hooks/api"
 import {useEffect, useState, useRef} from "react"
 
 export default function DataTable({setCamera_id, dataTable, tableId, setDailyData, setPage, page}) {

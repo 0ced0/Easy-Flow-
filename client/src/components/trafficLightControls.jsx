@@ -2,13 +2,27 @@ import "../styles/trafficLightControls.css"
 import {postTrafficTimersConfig, postDensityConfig, postFlowConfig} from "../hooks/api"
 import {useState} from 'react'
 
-export default function TrafficLightControls({
+export default function TrafficLightControls(props) {
+    const { timerConfiguration, densityConfiguration, flowConfiguration } = props
+
+    if (
+        !Array.isArray(timerConfiguration?.freeflow) ||
+        !Array.isArray(timerConfiguration?.slowdown) ||
+        !Array.isArray(timerConfiguration?.congested) ||
+        densityConfiguration?.length < 4 ||
+        flowConfiguration?.length < 4
+    ) {
+        return null
+    }
+
+    return <TrafficLightControlsForm {...props} />
+}
+
+function TrafficLightControlsForm({
     timerConfiguration,
     densityConfiguration,
     flowConfiguration}) 
     {
-    
-    try{
         const [currentTimerConfiguration, setCurrentTimerConfiguration] = useState([
         {
             approach_id: 1,
@@ -108,8 +122,8 @@ export default function TrafficLightControls({
         const handleSave = async () => {
             try{
                 const timerResponse = await postTrafficTimersConfig(currentTimerConfiguration)
-                const densityResponse = await postDensityConfig(currentDensityConfig)
-                const flowResponse = await postFlowConfig(currentFlowConfig)
+                await postDensityConfig(currentDensityConfig)
+                await postFlowConfig(currentFlowConfig)
                 const timerData = await timerResponse.json()
 
                 console.log(timerData)
@@ -406,7 +420,4 @@ export default function TrafficLightControls({
                 </div>
             </div>
         )
-    }catch(error){
-        console.error(error)
-    }
 }

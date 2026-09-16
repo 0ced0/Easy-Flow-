@@ -141,7 +141,7 @@ export const getDailyData = async (camera_id=0, page, dateFilter=null) => {
         // console.log(page)
         return await fetch(`${BACKEND_BASE_URL}/get_daily_data?camera_id=${camera_id}&page=${page}&dateFilter=${dateFilter}`)
     }catch(error){
-        console.error
+        console.error(error)
     }
 }
 export const getMonthlyData = async (camera_id=0, dateFilter=null) => {
@@ -253,6 +253,14 @@ export const getViolationData = async () => {
     }
 }
 
+export const getViolationMetadata = async (signal) => {
+    return fetch(`${BACKEND_BASE_URL}/get_violation_metadata`, {signal})
+}
+
+export const getViolationEvidence = async (violationId, signal) => {
+    return fetch(`${BACKEND_BASE_URL}/violations/${violationId}/evidence`, {signal})
+}
+
 export const getAllViolationData = async () => {
     try{
         return await fetch(`${BACKEND_BASE_URL}/get_all_violation_data`)
@@ -261,13 +269,14 @@ export const getAllViolationData = async () => {
     }
 }
 
-export const getPaginatedViolationData = async (page, search = '', violationType = 'all') => {
+export const getPaginatedViolationData = async (page, search = '', violationType = 'all', signal, includeEvidence = true) => {
     try{
         const params = new URLSearchParams({page: String(page), page_size: '10'})
         if (search.trim()) params.set('search', search.trim())
         if (violationType !== 'all') params.set('violation_type', violationType)
+        if (!includeEvidence) params.set('include_evidence', 'false')
 
-        return await fetch(`${BACKEND_BASE_URL}/get_paginated_violation_data?${params}`)
+        return await fetch(`${BACKEND_BASE_URL}/get_paginated_violation_data?${params}`, {signal})
     }catch(error){
         console.error(error)
     }

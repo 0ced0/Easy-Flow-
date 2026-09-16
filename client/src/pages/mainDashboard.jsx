@@ -10,6 +10,7 @@ import ViolationDataDisplay from '../components/violationDataDisplay.jsx'
 import TrafficMap from '../components/trafficMap.jsx'
 import SummaryCard from '../components/summaryCard.jsx'
 import ApproachCards from '../components/approachCards.jsx'
+import TrafficLightControls from '../components/trafficLightControls.jsx'
 import SideBar from '../components/sideBar.jsx'
 
 import { VideoStream } from '../components/videoStream.jsx'
@@ -23,7 +24,7 @@ import {getDashboardSnapshot,
     getTrafficLightData,
     getDensityConfig,
     getFlowConfig,
-    getViolationData,
+    getViolationMetadata,
     getAllRows,
     getSummaryData
 } from '../hooks/api'
@@ -99,8 +100,7 @@ export default function MainDashboard() {
 
     useEffect(() => {
         let isRunning = true
-        let shortPollTimeout = null
-        let trafficLightPollTimeout = null
+        let dashboardPollTimeout = null
         let violationPollTimeout = null
         let chartPollTimeout = null
         let snapshotController = null
@@ -108,11 +108,13 @@ export default function MainDashboard() {
 
         const loadConfiguration = async () => {
             try {
-                const [densityConfigResponse, flowConfigurationResponse] = await Promise.all([
+                const [trafficLightResponse, densityConfigResponse, flowConfigurationResponse] = await Promise.all([
+                    getTrafficLightData(),
                     getDensityConfig(),
                     getFlowConfig(),
                 ])
-                const [densityConfigData, flowConfigurationData] = await Promise.all([
+                const [trafficLightData, densityConfigData, flowConfigurationData] = await Promise.all([
+                    trafficLightResponse.json(),
                     densityConfigResponse.json(),
                     flowConfigurationResponse.json(),
                 ])
@@ -121,55 +123,31 @@ export default function MainDashboard() {
 
                 setDensityConfiguration(densityConfigData)
                 setFlowConfiguration(flowConfigurationData)
+                setCurrentConfiguration(trafficLightData.currentConfiguration)
+                setTimerConfiguration(trafficLightData.currentConfiguration)
             } catch (error) {
                 console.error(error)
             }
         }
         
-        const shortPoll = async () => {
+        const pollDashboardSnapshot = async () => {
             if (!isRunning) return 
 
             const requestNumber = ++latestSnapshotRequest
             snapshotController = new AbortController()
+            const requestStarted = Date.now() / 1000
             try {
-                const cameraStatsStarted = performance.now()
+                const snapshotStarted = performance.now()
                 const snapshotResponse = await getDashboardSnapshot(snapshotController.signal)
+                const responseReceived = Date.now() / 1000
                 const snapshot = await snapshotResponse.json()
+                const tltData = snapshot.traffic_lights
 
                 if (PERF_LOGGING) {
-                    console.info(`[PERF] dashboard snapshot: ${(performance.now() - cameraStatsStarted).toFixed(1)}ms`)
+                    console.info(`[PERF] dashboard snapshot: ${(performance.now() - snapshotStarted).toFixed(1)}ms`)
                 }
 
                 if (!isRunning || requestNumber !== latestSnapshotRequest) return
-
-                setStolVehicleNumbers(snapshot.cameras.STOL.vehicleCount)
-                setStopVehicleNumbers(snapshot.cameras.STOP.vehicleCount)
-                setStosVehicleNumbers(snapshot.cameras.STOS.vehicleCount)
-                setStocVehicleNumbers(snapshot.cameras.STOC.vehicleCount)
-            } catch (error) {
-                if (error.name !== 'AbortError') console.error(error)
-            }
-
-            if (isRunning) {
-                shortPollTimeout = window.setTimeout(shortPoll, 2000)
-            }
-        }
-
-        const pollTrafficLight = async () => {
-            if (!isRunning) return
-
-            const requestStarted = Date.now() / 1000
-            const trafficStateStarted = performance.now()
-            try {
-                const tltResponse = await getTrafficLightData()
-                const responseReceived = Date.now() / 1000
-                const tltData = await tltResponse.json()
-
-                if (PERF_LOGGING) {
-                    console.info(`[PERF] traffic state: ${(performance.now() - trafficStateStarted).toFixed(1)}ms`)
-                }
-
-                if (!isRunning) return
 
                 const stateVersion = Number(tltData.state_version)
                 if (!Number.isFinite(stateVersion)
@@ -209,15 +187,17 @@ export default function MainDashboard() {
                         })),
                     })
                 }
-                setApproachStates(tltData.state)
-                setCurrentConfiguration(tltData.currentConfiguration)
-                setTimerConfiguration(tltData.currentConfiguration)
+                setStolVehicleNumbers(snapshot.cameras.STOL.vehicleCount)
+                setStopVehicleNumbers(snapshot.cameras.STOP.vehicleCount)
+                setStosVehicleNumbers(snapshot.cameras.STOS.vehicleCount)
+                setStocVehicleNumbers(snapshot.cameras.STOC.vehicleCount)
+                setApproachStates(tltData.traffic_states)
             } catch (error) {
-                console.error(error)
+                if (error.name !== 'AbortError') console.error(error)
             }
 
             if (isRunning) {
-                trafficLightPollTimeout = window.setTimeout(pollTrafficLight, 1000)
+                dashboardPollTimeout = window.setTimeout(pollDashboardSnapshot, 1000)
             }
         }
 
@@ -226,7 +206,7 @@ export default function MainDashboard() {
 
             try {
                 const violationsStarted = performance.now()
-                const violationDataResponse = await getViolationData()
+                const violationDataResponse = await getViolationMetadata()
                 const violationData = await violationDataResponse.json()
 
                 if (PERF_LOGGING) {
@@ -236,7 +216,7 @@ export default function MainDashboard() {
                 if (!isRunning) return
 
                 setViolationData(violationData)
-                setViolationDisplay((currentViolation) => currentViolation ?? violationData[0] ?? null)
+                setViolationDisplay((currentViolation) => currentViolation)
             } catch (error) {
                 console.error(error)
             }
@@ -329,16 +309,14 @@ export default function MainDashboard() {
             }
         }
         loadConfiguration()
-        shortPoll()
-        pollTrafficLight()
+        pollDashboardSnapshot()
         pollViolations()
         updateChartData()
 
         return () => {
             isRunning = false
             snapshotController?.abort()
-            if (shortPollTimeout !== null) clearTimeout(shortPollTimeout)
-            if (trafficLightPollTimeout !== null) clearTimeout(trafficLightPollTimeout)
+            if (dashboardPollTimeout !== null) clearTimeout(dashboardPollTimeout)
             if (violationPollTimeout !== null) clearTimeout(violationPollTimeout)
             if (chartPollTimeout !== null) clearTimeout(chartPollTimeout)
         }

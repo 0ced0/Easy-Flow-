@@ -1,7 +1,7 @@
 import SideBar from '../components/sideBar.jsx'
 import DataTable from '../components/dataTable.jsx'
 import {useState, useEffect, useRef} from 'react'
-import {getTrafficData, getAllRows, getMonthlyData, getDailyData, getWeeklyData} from '../hooks/api.js'
+import {getMonthlyData, getDailyData, getWeeklyData} from '../hooks/api.js'
 import TriSUmmaryCard from '../components/triSummaryCards.jsx'
 import SummaryChart from '../components/summaryChart.jsx'
 
@@ -25,6 +25,8 @@ export default function DataTablePage() {
         "Sambat to Complex"]
     const approachRef = useRef(null)
     const approachButtonRef = useRef(null)
+    const summaryRequestVersion = useRef(0)
+    const dailyRequestVersion = useRef(0)
     const now = new Date()
     const [dailyData, setDailyData] = useState([])
     const [weeklyData, setWeeklyData] = useState([])
@@ -39,20 +41,25 @@ export default function DataTablePage() {
     const dataCategory = ["Total Vehicle Count", "Average Vehicle Flow", "Average Spatial Density"]
     
     useEffect(() => {
+        const requestVersion = ++summaryRequestVersion.current
         const handleRequestDataTable = async () => {
-            const response = await getMonthlyData(camera_id, monthFilter) 
-            const data = await response.json()
-            setTableId(camera_id)
-            setSummaryData(data)
+            try {
+                const response = await getMonthlyData(camera_id, monthFilter)
+                const data = await response.json()
+                const previousMonth = getPreviousMonth(monthFilter)
+                const previousResponse = await getMonthlyData(camera_id, previousMonth)
+                const previousData = await previousResponse.json()
+                const weeklyResponse = await getWeeklyData(camera_id, monthFilter)
+                const weeklyResponseData = await weeklyResponse.json()
 
-            const previousMonth = getPreviousMonth(monthFilter)
-            const previousResponse = await getMonthlyData(camera_id, previousMonth)
-            const previousData = await previousResponse.json()
-            setPreviousSummaryData(previousData)
-
-            const weeklyResponse = await getWeeklyData(camera_id, monthFilter)
-            const weeklyResponseData = await weeklyResponse.json()
-            setWeeklyData(weeklyResponseData)
+                if (requestVersion !== summaryRequestVersion.current) return
+                setTableId(camera_id)
+                setSummaryData(data)
+                setPreviousSummaryData(previousData)
+                setWeeklyData(weeklyResponseData)
+            } catch (error) {
+                if (requestVersion === summaryRequestVersion.current) console.error(error)
+            }
         }
         handleRequestDataTable()
     }, [monthFilter, camera_id])
@@ -76,14 +83,15 @@ export default function DataTablePage() {
     }
 
     useEffect (() => {
+        const requestVersion = ++dailyRequestVersion.current
         const initialize = async () => {
-            const dtResponse = await getAllRows(camera_id, page)
-            const dtData = await dtResponse.json()
-            
-            const ddResponse = await getDailyData(camera_id, page, monthFilter)
-            const ddData = await ddResponse.json()
-            // console.log(ddData)
-            setDailyData(ddData)
+            try {
+                const ddResponse = await getDailyData(camera_id, page, monthFilter)
+                const ddData = await ddResponse.json()
+                if (requestVersion === dailyRequestVersion.current) setDailyData(ddData)
+            } catch (error) {
+                if (requestVersion === dailyRequestVersion.current) console.error(error)
+            }
         }
 
         document.addEventListener("mousedown", handleClickOutsideApproach)
@@ -92,7 +100,7 @@ export default function DataTablePage() {
         return () => {
             document.removeEventListener("mousedown", handleClickOutsideApproach)
         }
-    },[camera_id, monthFilter])
+    },[camera_id, monthFilter, page])
 
     try{
         return(

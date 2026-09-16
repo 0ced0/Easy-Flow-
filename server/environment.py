@@ -2,6 +2,7 @@
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 
 LOCAL_DATABASE_NAME = "easyflow_local"
@@ -13,6 +14,12 @@ CCTV_ENVIRONMENT_NAMES = (
     "STOS_CCTV_USERNAME", "STOS_CCTV_PASSWORD",
     "STOC_CCTV_USERNAME", "STOC_CCTV_PASSWORD",
 )
+LOCAL_VIDEO_ENVIRONMENT_NAMES = {
+    "STOL": "EASYFLOW_STOL_VIDEO",
+    "STOP": "EASYFLOW_STOP_VIDEO",
+    "STOS": "EASYFLOW_STOS_VIDEO",
+    "STOC": "EASYFLOW_STOC_VIDEO",
+}
 
 
 def _required(name):
@@ -55,11 +62,27 @@ def validateEnvironment():
                 + ", ".join(configuredCctv)
             )
 
+        localVideoPaths = {}
+        for approach, variableName in LOCAL_VIDEO_ENVIRONMENT_NAMES.items():
+            videoPath = Path(_required(variableName)).expanduser().resolve()
+            if not videoPath.is_file():
+                raise RuntimeError(
+                    f"LOCAL startup cannot find {approach} simulation video: {videoPath}"
+                )
+            localVideoPaths[approach] = videoPath
+
         print("[LOCAL DEV]")
         print("Environment: LOCAL")
         print(f"Database: {databaseName}")
         print("Video source: local files")
         print("Municipal gateway: DISABLED")
+        print("[LOCAL VIDEO]")
+        for approach, videoPath in localVideoPaths.items():
+            print(f"{approach} -> {videoPath}")
+
+        if len(set(localVideoPaths.values())) < len(localVideoPaths):
+            print("[LOCAL DEV WARNING]")
+            print("Multiple approaches are using the same simulation recording.")
     else:
         if videoSource != "live":
             raise RuntimeError(
@@ -69,6 +92,8 @@ def validateEnvironment():
             raise RuntimeError(
                 f"LIVE startup requires DB_NAME={LIVE_DATABASE_NAME}."
             )
+        if not _required("DB_USER") or not os.environ.get("DB_PASSWORD", "").strip():
+            raise RuntimeError("LIVE startup requires non-empty DB_USER and DB_PASSWORD.")
 
         missingCctv = [name for name in CCTV_ENVIRONMENT_NAMES if not os.environ.get(name)]
         if missingCctv:
@@ -86,4 +111,5 @@ def validateEnvironment():
         "environment": environment,
         "videoSource": videoSource,
         "databaseName": databaseName,
+        "localVideoPaths": localVideoPaths if environment == "local" else None,
     }

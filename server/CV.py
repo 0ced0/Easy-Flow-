@@ -45,13 +45,6 @@ MOVING_PEER_DISTANCE_THRESHOLD = 20
 MIN_MOVING_PEERS = 2
 
 
-# FOR VIDEO TESTING
-base_dir = Path(__file__).resolve().parent
-videoPath = Path(base_dir/"sambat_to_lspu.mp4")
-cap = cv2.VideoCapture(videoPath)
-
-
-
 class ComputerVisionComponent:
 
     def __init__(self, cameraId): 

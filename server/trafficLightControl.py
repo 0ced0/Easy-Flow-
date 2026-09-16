@@ -7,9 +7,10 @@ import os
 
 
 CONTROLLER_TICK_SECONDS = 1.0
-YELLOW_SECONDS = 4
+YELLOW_SECONDS = 3
 ALL_RED_SECONDS = 3
 CLEARANCE_SECONDS = YELLOW_SECONDS + ALL_RED_SECONDS
+assert CLEARANCE_SECONDS == 6
 TLC_TRACE = os.environ.get("EASYFLOW_TLC_TRACE", "").strip().lower() == "true"
 
 intersectionTimers = Blueprint("intersectionTimers", __name__)
@@ -48,6 +49,7 @@ trafficLightStates = {
 class trafficLightControls:
 
     def __init__(self):
+        self.stateLock = threading.RLock()
         self.lspuTrafficData = None
         self.patimbaoTrafficData = None
         self.sunstarTrafficData = None
@@ -69,7 +71,8 @@ class trafficLightControls:
         self.states
 
     def advanceStateVersion(self):
-        self.stateVersion += 1
+        with self.stateLock:
+            self.stateVersion += 1
 
     def updateConfiguration(self):
         response = self.getTimerConfiguration()
@@ -125,7 +128,8 @@ class trafficLightControls:
             approach += 1
 
         cycle = [timers[0]["timerAllocation"], timers[1]["timerAllocation"], timers[2]["timerAllocation"], timers[3]["timerAllocation"]] 
-        self.states = [timers[0]["trafficState"], timers[1]["trafficState"], timers[2]["trafficState"], timers[3]["trafficState"]]
+        with self.stateLock:
+            self.states = [timers[0]["trafficState"], timers[1]["trafficState"], timers[2]["trafficState"], timers[3]["trafficState"]]
 
         return cycle
         
@@ -151,155 +155,124 @@ class trafficLightControls:
         approaches = [approachA, approachB, approachC, approachD]
         return approaches
 
+    def nextGreenTimer(self, approach, clearanceCount):
+        """Return real schedule seconds to approach's next green.
+
+        currentCycle is still being executed; adaptedCycle is the following
+        A→B→C→D cycle.  There are exactly three six-second clearances between
+        a just-cleared approach and its next green.
+        """
+        currentA, currentB, currentC, currentD = self.currentCycle
+        adaptedA, adaptedB, adaptedC, _ = self.adaptedCycle
+        clearanceTime = CLEARANCE_SECONDS * clearanceCount
+
+        if approach == "A":
+            return currentB + currentC + currentD + clearanceTime
+        if approach == "B":
+            return adaptedA + currentC + currentD + clearanceTime
+        if approach == "C":
+            return adaptedA + adaptedB + currentD + clearanceTime
+        return adaptedA + adaptedB + adaptedC + clearanceTime
+
     def trafficLightLoop(self):
 
         SC.start()
         SC.setLight(self.allowedApproach, "green")
         SC.step()
         approaches = self.initializeTimers()
-        self.trafficLightData = approaches
-        self.controllerPhase = "green"
-        self.phaseRemainingSeconds = approaches[0][1]
-        self.advanceStateVersion()
-        clearance = False
+        with self.stateLock:
+            self.trafficLightData = approaches
+            self.controllerPhase = "green"
+            self.phaseRemainingSeconds = approaches[0][1]
+            self.advanceStateVersion()
         transition = False
-        cycle = True
         while True:
-            while cycle:
-                if transition:
-                    approaches, clearance = self.clearance(self.allowedApproach, approaches, clearance)
-                    approaches, transition = self.timeStep(approaches, transition, self.allowedApproach, steps=YELLOW_SECONDS, clearancePhase=True)
-                    approaches, clearance = self.clearance(self.allowedApproach, approaches, clearance)
-                    approaches, transition = self.timeStep(approaches, transition, self.allowedApproach, steps=ALL_RED_SECONDS, clearancePhase=True)
+            if transition:
+                approaches = self.clearance(self.allowedApproach, approaches, "yellow")
+                approaches, transition = self.timeStep(
+                    approaches, transition, self.allowedApproach,
+                    steps=YELLOW_SECONDS, clearancePhase=True,
+                )
+                approaches = self.clearance(self.allowedApproach, approaches, "all-red")
+                approaches, transition = self.timeStep(
+                    approaches, transition, self.allowedApproach,
+                    steps=ALL_RED_SECONDS, clearancePhase=True,
+                )
+                approaches, self.allowedApproach, transition = self.transition(
+                    approaches, self.allowedApproach,
+                )
 
-                    approaches, self.allowedApproach, transition, clearance, cycle = self.transition(approaches, self.allowedApproach, transition, clearance, cycle)
+            approaches, transition = self.timeStep(approaches, transition, self.allowedApproach)
 
-                approaches, transition = self.timeStep(approaches, transition, self.allowedApproach)
+    def transition(self, approaches, allowedApproach):
+        if allowedApproach == "D":
+            # Compiling the next adaptive cycle can read configuration and
+            # forecast data. Keep snapshot reads available while it runs.
+            self.calculateNextCycle()
+        with self.stateLock:
+            match allowedApproach:
+                case "A":
+                    approaches[1][0] = "green"
+                    allowedApproach = "B"
+                    approaches[1][1] = self.currentCycle[1]
 
-            cycle = self.calculateNextCycle(cycle)
-
-    def transition(self, approaches, allowedApproach, transition, clearance, cycle):
-        match allowedApproach:
-            case "A":
-                approaches[1][0] = "green"
-                allowedApproach = "B"
-                approaches[1][1] = self.currentCycle[1]
-
-            case "B":
-                approaches[2][0] = "green"
-                allowedApproach = "C"
-                approaches[2][1] = self.currentCycle[2]
-
-
-            case "C":
-                approaches[3][0] = "green"
-                allowedApproach = "D"
-                approaches[3][1] = self.currentCycle[3]
-                cycle = False
-
-            case "D":
-                approaches[0][0] = "green"
-                allowedApproach = "A"
-                approaches[0][1] = self.currentCycle[0]
+                case "B":
+                    approaches[2][0] = "green"
+                    allowedApproach = "C"
+                    approaches[2][1] = self.currentCycle[2]
 
 
-        SC.setLight(allowedApproach, "green")
-        self.controllerPhase = "green"
-        self.phaseRemainingSeconds = next(
-            approach[1] for approach in approaches if approach[2] == allowedApproach
-        )
-        self.advanceStateVersion()
-        transition = False
-        clearance = False
-        return approaches, allowedApproach, transition, clearance, cycle
+                case "C":
+                    approaches[3][0] = "green"
+                    allowedApproach = "D"
+                    approaches[3][1] = self.currentCycle[3]
 
-    def clearance(self, allowedApproach, approaches, clearance):
+                case "D":
+                    # D is the final green in currentCycle. Promote only after D
+                    # has physically cleared, before the next A starts green.
+                    approaches[0][0] = "green"
+                    allowedApproach = "A"
+                    approaches[0][1] = self.currentCycle[0]
 
-        currentCycle = self.currentCycle.copy()
-        adaptedCycle = self.adaptedCycle.copy()
-        state = None
-        approach = None
-        if allowedApproach == "A":
-            approach = "A"
-            match approaches[0][0]:
-                case "green":
-                    approaches[0][0] = "yellow"
-                    approaches[0][1] = YELLOW_SECONDS
-                    state = "yellow"
-                    self.controllerPhase = "yellow"
-                    self.phaseRemainingSeconds = YELLOW_SECONDS
 
-                case "yellow":
-                    approaches[0][0] = "red"
-                    approaches[0][1] = currentCycle[1] + currentCycle[2] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
-                    clearance = True
-                    state = "red"
-                    self.controllerPhase = "all-red"
-                    self.phaseRemainingSeconds = ALL_RED_SECONDS
+            SC.setLight(allowedApproach, "green")
+            self.allowedApproach = allowedApproach
+            self.controllerPhase = "green"
+            self.phaseRemainingSeconds = next(
+                approach[1] for approach in approaches if approach[2] == allowedApproach
+            )
+            self.advanceStateVersion()
+        return approaches, allowedApproach, False
 
-        elif allowedApproach == "B":
-            approach = "B"
-            match approaches[1][0]:
-                case "green":
-                    approaches[1][0] = "yellow"
-                    approaches[1][1] = YELLOW_SECONDS
-                    state = "yellow"
-                    self.controllerPhase = "yellow"
-                    self.phaseRemainingSeconds = YELLOW_SECONDS
+    def clearance(self, allowedApproach, approaches, phase):
+        with self.stateLock:
+            approach = approaches["ABCD".index(allowedApproach)]
+            if phase == "yellow":
+                # The just-expired green gets its own yellow countdown before its
+                # next-green (red) timer is calculated.
+                approach[1] = YELLOW_SECONDS
+                approach[0] = "yellow"
+                self.controllerPhase = "yellow"
+                self.phaseRemainingSeconds = YELLOW_SECONDS
+                SC.setLight(allowedApproach, "yellow")
+            else:
+                # At the beginning of all-red, include the remaining all-red
+                # seconds plus the three complete downstream clearances.  The
+                # normal per-second decrement keeps this timer continuous.
+                approach[1] = (
+                    self.nextGreenTimer(allowedApproach, clearanceCount=3)
+                    + ALL_RED_SECONDS
+                )
+                approach[0] = "red"
+                self.controllerPhase = "all-red"
+                self.phaseRemainingSeconds = ALL_RED_SECONDS
+                SC.setLight(allowedApproach, "red")
+            self.advanceStateVersion()
+        return approaches
 
-                case "yellow":
-                    approaches[1][0] = "red"
-                    approaches[1][1] = adaptedCycle[0] + currentCycle[2] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
-                    clearance = True
-                    state = "red"
-                    self.controllerPhase = "all-red"
-                    self.phaseRemainingSeconds = ALL_RED_SECONDS
-
-        elif allowedApproach == "C":
-            approach = "C"
-            match approaches[2][0]:
-                case "green":
-                    approaches[2][0] = "yellow"
-                    approaches[2][1] = YELLOW_SECONDS
-                    state = "yellow"
-                    self.controllerPhase = "yellow"
-                    self.phaseRemainingSeconds = YELLOW_SECONDS
-
-                case "yellow":
-                    approaches[2][0] = "red"
-                    approaches[2][1] = adaptedCycle[0] + adaptedCycle[1] + currentCycle[3] + (CLEARANCE_SECONDS * 3)
-                    clearance = True
-                    state = "red"
-                    self.controllerPhase = "all-red"
-                    self.phaseRemainingSeconds = ALL_RED_SECONDS
-
-        elif allowedApproach == "D":
-            approach = "D"
-            match approaches[3][0]:
-                case "green":
-                    approaches[3][0] = "yellow"
-                    approaches[3][1] = YELLOW_SECONDS
-                    state = "yellow"
-                    self.controllerPhase = "yellow"
-                    self.phaseRemainingSeconds = YELLOW_SECONDS
-
-                case "yellow":
-                    approaches[3][0] = "red"
-                    approaches[3][1] = currentCycle[1] + currentCycle[2] + currentCycle[0] + (CLEARANCE_SECONDS * 3)
-                    clearance = True
-                    state = "red"
-                    self.controllerPhase = "all-red"
-                    self.phaseRemainingSeconds = ALL_RED_SECONDS
-
-        SC.setLight(approach, state)
-        self.advanceStateVersion()
-        return approaches, clearance
-
-    def calculateNextCycle(self, cycle):
+    def calculateNextCycle(self):
         self.currentCycle = self.adaptedCycle.copy()
         self.adaptedCycle = self.timerCompiler()
-        cycle=True
-        return cycle
     
     def timeStep(self, approaches, transition, allowedApproach, steps=None, clearancePhase=False):
 
@@ -309,27 +282,38 @@ class trafficLightControls:
         for _ in range(steps):
             tickStarted = time.perf_counter()
             if clearancePhase:
-                self.trafficLightData = approaches
+                # Publish the physical phase duration before consuming its
+                # wall-clock second. Approach schedule timers are decremented
+                # together only after that second has elapsed.
+                with self.stateLock:
+                    self.trafficLightData = approaches
                 if TLC_TRACE:
                     timers = " ".join(f"{approach[2]}={approach[1]}" for approach in approaches)
-                    print(f"[TLC TRACE] t={time.strftime('%H:%M:%S')} version={self.stateVersion} phase={self.controllerPhase} allowed={allowedApproach} phase_remaining={self.phaseRemainingSeconds} {timers}")
+                    print(
+                        f"[TLC TRACE] t={time.strftime('%H:%M:%S')} "
+                        f"version={self.stateVersion} phase={self.controllerPhase} "
+                        f"phase_remaining={self.phaseRemainingSeconds} "
+                        f"allowed={allowedApproach} {timers} "
+                        f"current={self.currentCycle} adapted={self.adaptedCycle}"
+                    )
                 remainingSleep = CONTROLLER_TICK_SECONDS - (time.perf_counter() - tickStarted)
                 if remainingSleep > 0:
                     time.sleep(remainingSleep)
-            for index, approach in enumerate(approaches):
-                approach[1] = max(0, approach[1] - 1) 
+            with self.stateLock:
+                for approach in approaches:
+                    approach[1] = max(0, approach[1] - 1)
 
-            if clearancePhase:
-                self.phaseRemainingSeconds = max(0, self.phaseRemainingSeconds - 1)
-                continue
+                if clearancePhase:
+                    self.phaseRemainingSeconds = max(0, self.phaseRemainingSeconds - 1)
+                    self.trafficLightData = approaches
+                    continue
+                elif next((approach[1] for approach in approaches if approach[2] == allowedApproach)) == 0:
+                    transition = True
 
-            if next((approach[1] for approach in approaches if approach[2] == allowedApproach)) == 0:
-                transition = True
-
-            self.trafficLightData = approaches
-            self.phaseRemainingSeconds = next(
-                approach[1] for approach in approaches if approach[2] == allowedApproach
-            )
+                self.trafficLightData = approaches
+                self.phaseRemainingSeconds = next(
+                    approach[1] for approach in approaches if approach[2] == allowedApproach
+                )
             SC.step()
             if TLC_TRACE:
                 timers = " ".join(
@@ -339,7 +323,8 @@ class trafficLightControls:
                     f"[TLC TRACE] t={time.strftime('%H:%M:%S')} "
                     f"version={self.stateVersion} "
                     f"phase={self.controllerPhase} phase_remaining={self.phaseRemainingSeconds} "
-                    f"allowed={allowedApproach} {timers}"
+                    f"allowed={allowedApproach} {timers} "
+                    f"current={self.currentCycle} adapted={self.adaptedCycle}"
                 )
 
             remainingSleep = CONTROLLER_TICK_SECONDS - (time.perf_counter() - tickStarted)
@@ -377,6 +362,30 @@ class trafficLightControls:
             "phase_remaining_seconds": self.phaseRemainingSeconds,
             "approaches": approaches,
         }
+
+    def returnDashboardSnapshot(self):
+        with self.stateLock:
+            serverTimestamp = time.time()
+            approaches = [
+                {
+                    "approach": approach[2],
+                    "state": approach[0],
+                    "remaining_seconds": approach[1],
+                    "ends_at": serverTimestamp + approach[1],
+                    "countdown_event": "controller_timer_expiry",
+                }
+                for approach in self.trafficLightData
+                if len(approach) >= 3
+            ]
+            return {
+                "server_timestamp": serverTimestamp,
+                "state_version": self.stateVersion,
+                "allowed_approach": self.allowedApproach,
+                "controller_phase": self.controllerPhase,
+                "phase_remaining_seconds": self.phaseRemainingSeconds,
+                "approaches": approaches,
+                "traffic_states": list(self.states),
+            }
 
     def startTrafficLightControl(self):
         self.threadTrafficLightLoop = threading.Thread(

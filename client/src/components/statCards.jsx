@@ -1,8 +1,8 @@
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {getTrafficData} from '../hooks/api.js'
 
-export default function StatCard({approachFilter, setApproachFilter, dateFilter, setDateFilter, vehicleNumbers, averageVehicleSpeed, condition}) {
+export default function StatCard({approachFilter, setApproachFilter, dateFilter, setDateFilter, vehicleNumbers, averageVehicleSpeed}) {
 
     const [showDateDropDown, setShowDateDropDown] = useState(false)
     const [showApproachDropDown, setShowApproachDropDown] = useState(false)
@@ -10,7 +10,9 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
     const dateButtonRef = useRef(null)
     const approachRef = useRef(null)
     const approachButtonRef = useRef(null)
+    const dataRequestVersion = useRef(0)
     const [currentApproach, setCurrentApproach] = useState("Sambat to Lspu")
+    const [currentData, setCurrentData] = useState([])
     const approaches = [
             "Sambat to Lspu",
             "Sambat to Patimbao",
@@ -19,7 +21,7 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
         ]
 
     // console.log(approachFilter)
-    const handleSetData = async () => {
+    const handleSetData = useCallback(async (requestVersion) => {
         
         const normalizeHourlyData = (hourlyData) => {
             const dataByHour = new Map(
@@ -36,6 +38,7 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
         }
         const response = await getTrafficData(approachFilter, dateFilter)
         let data = await response.json()
+        if (requestVersion !== dataRequestVersion.current) return
         if(data.length > 0){
             data = normalizeHourlyData(data)
             setCurrentData(data)
@@ -44,10 +47,8 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
             setCurrentData(null)
         }
 
-    }
+    }, [approachFilter, dateFilter])
     
-    const [currentData, setCurrentData] = useState([])
-
     function handleClickOutsideDate (event) {
         if(!dateRef?.current?.contains(event.target)
             && !dateButtonRef?.current?.contains(event.target)
@@ -77,14 +78,18 @@ export default function StatCard({approachFilter, setApproachFilter, dateFilter,
     }
 
     useEffect(() => {
+        const requestVersion = ++dataRequestVersion.current
         document.addEventListener("mousedown", handleClickOutsideDate)
         document.addEventListener("mousedown", handleClickOutsideApproach)
-        handleSetData()
+        handleSetData(requestVersion).catch((error) => {
+            if (requestVersion === dataRequestVersion.current) console.error(error)
+        })
 
         return () => {
             document.removeEventListener("mousedown", handleClickOutsideDate)
+            document.removeEventListener("mousedown", handleClickOutsideApproach)
         }
-    },[approachFilter, dateFilter])
+    },[handleSetData])
 
     // console.log(currentData)
     return (

@@ -189,21 +189,29 @@ class streamControl:
         with self.jpegCondition:
             self.processedFrameSequence += 1
             sequence = self.processedFrameSequence
-            for variant, profile in JPEG_PROFILES.items():
-                if now - self.lastJpegEncodeAt[variant] < 1 / profile["max_fps"]:
-                    continue
-                outputFrame = processedFrame
-                width = profile["width"]
-                if width and processedFrame.shape[1] > width:
-                    height = round(processedFrame.shape[0] * width / processedFrame.shape[1])
-                    outputFrame = cv2.resize(processedFrame, (width, height), interpolation=cv2.INTER_AREA)
-                started = time.perf_counter()
-                success, buffer = cv2.imencode(
-                    ".jpg", outputFrame, [cv2.IMWRITE_JPEG_QUALITY, profile["quality"]]
-                )
-                if not success:
-                    continue
-                jpeg = buffer.tobytes()
+            activeProfiles = [
+                (variant, profile)
+                for variant, profile in JPEG_PROFILES.items()
+                if self.clientCounts[variant] > 0
+                and now - self.lastJpegEncodeAt[variant] >= 1 / profile["max_fps"]
+            ]
+
+        encodedFrames = []
+        for variant, profile in activeProfiles:
+            outputFrame = processedFrame
+            width = profile["width"]
+            if width and processedFrame.shape[1] > width:
+                height = round(processedFrame.shape[0] * width / processedFrame.shape[1])
+                outputFrame = cv2.resize(processedFrame, (width, height), interpolation=cv2.INTER_AREA)
+            started = time.perf_counter()
+            success, buffer = cv2.imencode(
+                ".jpg", outputFrame, [cv2.IMWRITE_JPEG_QUALITY, profile["quality"]]
+            )
+            if success:
+                encodedFrames.append((variant, buffer.tobytes(), started))
+
+        with self.jpegCondition:
+            for variant, jpeg, started in encodedFrames:
                 self.jpegCaches[variant] = {"sequence": sequence, "bytes": jpeg}
                 self.lastJpegEncodeAt[variant] = now
                 self.recordJpegEncode(variant, time.perf_counter() - started, len(jpeg))
@@ -633,6 +641,7 @@ def dashboardSnapshot():
             "STOS": stosStream.getCurrentSnapshot(),
             "STOC": stocStream.getCurrentSnapshot(),
         },
+        "traffic_lights": TLC.returnDashboardSnapshot(),
     }
     response = jsonify(snapshot)
     if PERF_LOGGING:

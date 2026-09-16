@@ -9,11 +9,15 @@ from environment import validateEnvironment
 
 environmentConfig = validateEnvironment()
 
-dbUser = os.environ.get("DB_USER")
-dbPassword = os.environ.get("DB_PASSWORD")
+dbUser = os.environ.get("DB_USER") or (
+    "root" if environmentConfig["environment"] == "local" else None
+)
+dbPassword = os.environ.get("DB_PASSWORD", "")
 
-if not dbUser or not dbPassword:
-    raise RuntimeError("DB_USER and DB_PASSWORD environment variables must be set.")
+if not dbUser or (
+    environmentConfig["environment"] == "live" and not dbPassword
+):
+    raise RuntimeError("LIVE requires non-empty DB_USER and DB_PASSWORD.")
 
 DB_CONFIG = {
     "host" : os.environ.get("DB_HOST", "127.0.0.1"),
@@ -812,6 +816,63 @@ def dbGetViolationData():
             db.close()
         logDbPerf("dbGetViolationData", started, connectDuration, queryDuration)
 
+def dbGetRecentViolationMetadata(limit=40):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
+    db = None
+    cursor = None
+    try:
+        connectStarted = time.perf_counter()
+        db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
+        cursor = db.cursor(dictionary=True)
+        queryStarted = time.perf_counter()
+        cursor.execute("""
+            SELECT id, camera_id, vehicle, violation_type, time_stamp
+            FROM violations
+            ORDER BY id DESC
+            LIMIT %s
+        """, (limit,))
+        data = cursor.fetchall()
+        queryDuration = time.perf_counter() - queryStarted
+        return data
+    except Error as error:
+        print(f"Database retrieval error: {error}")
+        return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetRecentViolationMetadata", started, connectDuration, queryDuration)
+
+def dbGetViolationEvidence(violationId):
+    started = time.perf_counter()
+    connectDuration = 0
+    queryDuration = 0
+    db = None
+    cursor = None
+    try:
+        connectStarted = time.perf_counter()
+        db = mysql.connector.connect(**DB_CONFIG)
+        connectDuration = time.perf_counter() - connectStarted
+        cursor = db.cursor(dictionary=True)
+        queryStarted = time.perf_counter()
+        cursor.execute("SELECT id, frame FROM violations WHERE id = %s", (violationId,))
+        data = cursor.fetchone()
+        queryDuration = time.perf_counter() - queryStarted
+        return data
+    except Error as error:
+        print(f"Database retrieval error: {error}")
+        return None
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+        logDbPerf("dbGetViolationEvidence", started, connectDuration, queryDuration)
+
 def dbGetAllViolationData():
     started = time.perf_counter()
     connectDuration = 0
@@ -847,7 +908,7 @@ def dbGetAllViolationData():
         if db is not None and db.is_connected():
             db.close()
         logDbPerf("dbGetAllViolationData", started, connectDuration, queryDuration)
-def dbGetViolationPage(page=1, pageSize=10, searchTerm="", violationType=None):
+def dbGetViolationPage(page=1, pageSize=10, searchTerm="", violationType=None, includeEvidence=True):
     db = None
     cursor = None
     try:
@@ -884,13 +945,14 @@ def dbGetViolationPage(page=1, pageSize=10, searchTerm="", violationType=None):
         counts = cursor.fetchone()
 
         offset = (page - 1) * pageSize
+        evidenceColumn = ", frame" if includeEvidence else ""
         cursor.execute(f"""
             SELECT
+                id,
                 camera_id,
                 vehicle,
                 violation_type,
-                time_stamp,
-                frame
+                time_stamp{evidenceColumn}
             FROM violations
             {whereClause}
             ORDER BY time_stamp DESC
