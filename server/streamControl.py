@@ -66,6 +66,7 @@ PERF_LOGGING = os.environ.get("EASYFLOW_PERF_LOGGING", "").strip().lower() == "t
 JPEG_PROFILES = {
     "main": {"max_fps": 12, "quality": 82, "width": None},
     "thumbnail": {"max_fps": 4, "quality": 70, "width": 400},
+    "live": {"max_fps": None, "quality": 70, "width": 400},
 }
 
 # DEBUG ERROR LIST
@@ -193,7 +194,10 @@ class streamControl:
                 (variant, profile)
                 for variant, profile in JPEG_PROFILES.items()
                 if self.clientCounts[variant] > 0
-                and now - self.lastJpegEncodeAt[variant] >= 1 / profile["max_fps"]
+                and (
+                    profile["max_fps"] is None
+                    or now - self.lastJpegEncodeAt[variant] >= 1 / profile["max_fps"]
+                )
             ]
 
         encodedFrames = []

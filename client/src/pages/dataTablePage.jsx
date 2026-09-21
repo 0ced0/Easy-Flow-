@@ -110,46 +110,46 @@ export default function DataTablePage() {
 
     try{
         return(
-            <div className="p-[0.1875rem] pb-15 md:pb-[0.1875rem] flex flex-col md:flex-row w-full h-[100dvh] box-border overflow-x-hidden overflow-y-auto md:overflow-hidden">
+            <div className="flex h-[100dvh] w-full box-border flex-col overflow-x-hidden overflow-y-auto bg-[#eaf1f6] p-[0.1875rem] pb-15 md:flex-row md:overflow-hidden md:pb-[0.1875rem]">
                 <SideBar compact />
                 <div className="w-full h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col py-[0.5625rem] px-[0.5625rem] sm:px-[1.125rem] md:py-[0.75rem] lg:px-[1.875rem] overflow-visible md:h-full md:overflow-hidden">
-                    <div className="relative shrink-0 flex flex-wrap items-center gap-1.5 justify-between mb-[0.5625rem] md:mb-[0.375rem]">
-                        <h1 className="w-full sm:w-auto font-medium text-[black]/70 text-[0.9375rem] sm:text-[1.275rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
-                        <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[11.25px] py-1.5 px-3 sm:ml-auto sm:mr-[0.5625rem] lg:mr-[0.9375rem] text-[0.75rem]">
+                    <div className="relative mb-[0.5625rem] flex shrink-0 flex-wrap items-center justify-between gap-1.5 md:mb-[0.375rem]">
+                        <h1 className="w-full text-[0.9375rem] font-semibold text-[#17324c] sm:w-auto sm:text-[1.275rem]">{approaches[camera_id - 1]} Monthly Summary</h1>
+                        <button ref={approachRef} onClick={() => {setShowApproachDropDown(prev => !prev)}} className="rounded-md border border-[#cfdeea] bg-[#f9fcff] px-3 py-1.5 text-[0.75rem] text-[#214766] shadow-[0_6px_14px_rgba(28,72,109,0.08)] hover:bg-[#edf4f9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1c5f9f] sm:ml-auto sm:mr-[0.5625rem] lg:mr-[0.9375rem]">
                             Approach
                         </button>
                         {showApproachDropDown &&(
-                            <div ref={approachButtonRef} className="z-100 absolute shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] bg-white w-full sm:w-[22.5vh] left-0 sm:left-auto sm:right-33 top-full mt-[0.1875rem] flex flex-col text-[0.75rem]">
-                                <button onClick={() => {handleApproachFilter(1)}} className="videoStreamButton">Sambat to LSPU</button>
-                                <button onClick={() => {handleApproachFilter(2)}} className="videoStreamButton">Sambat to Patimbao</button>
-                                <button onClick={() => {handleApproachFilter(4)}} className="videoStreamButton">Sambat to Complex</button>
-                                <button onClick={() => {handleApproachFilter(3)}} className="videoStreamButton">Sambat to Sunstar</button>
+                            <div ref={approachButtonRef} className="absolute top-full left-0 z-100 mt-[0.1875rem] flex w-full flex-col overflow-hidden rounded-md border border-[#cfdeea] bg-[#f9fcff] text-[0.75rem] text-[#214766] shadow-[0_8px_20px_rgba(28,72,109,0.16)] sm:left-auto sm:right-33 sm:w-[22.5vh]">
+                                <button onClick={() => {handleApproachFilter(1)}} className="videoStreamButton px-3 text-left">Sambat to LSPU</button>
+                                <button onClick={() => {handleApproachFilter(2)}} className="videoStreamButton px-3 text-left">Sambat to Patimbao</button>
+                                <button onClick={() => {handleApproachFilter(4)}} className="videoStreamButton px-3 text-left">Sambat to Complex</button>
+                                <button onClick={() => {handleApproachFilter(3)}} className="videoStreamButton px-3 text-left">Sambat to Sunstar</button>
                             </div>
                         )}
 
-                        <button className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded-[11.25px] py-1.5 px-3 text-[0.75rem]">
-                            <input onChange={(event) => {handleMonthFilter(event)}} type="month" value={monthFilter} className="text-[0.75rem]"></input>
+                        <button className="rounded-md border border-[#cfdeea] bg-[#f9fcff] px-3 py-1.5 text-[0.75rem] text-[#214766] shadow-[0_6px_14px_rgba(28,72,109,0.08)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#1c5f9f]">
+                            <input onChange={(event) => {handleMonthFilter(event)}} type="month" value={monthFilter} className="bg-transparent text-[0.75rem] text-[#214766] outline-none"></input>
                         </button>
                     </div>
                     
-                    <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-[0.5625rem] md:gap-[0.9375rem] px-1.5 sm:px-3 py-1.5 h-auto md:h-[clamp(120px,25dvh,215px)] bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
-                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                    <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-[0.5625rem] md:gap-[0.9375rem] px-1.5 sm:px-3 py-1.5 h-auto md:h-[clamp(120px,25dvh,215px)] rounded-lg border border-[#cfdeea] bg-[#edf4f9] shadow-[0_8px_20px_rgba(28,72,109,0.08)]">
+                        <div className="min-h-27 md:min-h-0 overflow-hidden rounded-md border border-[#cfdeea] bg-[#f9fcff] shadow-[0_6px_14px_rgba(28,72,109,0.08)]">
                             <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[0]} summaryValue={summaryData?.totalVehicleCount} previousValue={previousSummaryData?.totalVehicleCount} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
-                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="min-h-27 md:min-h-0 overflow-hidden rounded-md border border-[#cfdeea] bg-[#f9fcff] shadow-[0_6px_14px_rgba(28,72,109,0.08)]">
                             <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[1]} summaryValue={summaryData?.averageVehicleFlow} previousValue={previousSummaryData?.averageVehicleFlow} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
-                        <div className="min-h-27 md:min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="min-h-27 md:min-h-0 overflow-hidden rounded-md border border-[#cfdeea] bg-[#f9fcff] shadow-[0_6px_14px_rgba(28,72,109,0.08)]">
                             <TriSUmmaryCard isLoading={isSummaryLoading} dataCategory={dataCategory[2]} summaryValue={summaryData?.averageDensity} previousValue={previousSummaryData?.averageDensity} comparisonMonth={getMonthLabel(getPreviousMonth(monthFilter))}/>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 py-1.5 gap-3 h-auto flex-none md:flex-1 md:min-h-0">
                         {/* DATA TABLE */}
-                        <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden lg:pr-[0.5625rem] bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded">
+                        <div className="hidden sm:block min-h-0 min-w-0 overflow-hidden rounded-lg border border-[#cfdeea] bg-[#f9fcff] shadow-[0_8px_20px_rgba(28,72,109,0.08)] lg:pr-[0.5625rem]">
                             <DataTable cameraId={camera_id} dataTable={dailyData} setDailyData={setDailyData} setPage={setPage} page={page} monthFilter={monthFilter} isLoading={isDailyLoading} setIsLoading={setIsDailyLoading}/>
                         </div>
-                        <div className="h-[15rem] sm:h-[16.5rem] md:h-full min-h-0 min-w-0 bg-blue-700/10 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] space-y-[0.5625rem] p-1.5 sm:p-[0.5625rem] overflow-hidden">
-                            <div className="h-full min-h-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] rounded w-full">
+                        <div className="h-[15rem] sm:h-[16.5rem] md:h-full min-h-0 min-w-0 overflow-hidden rounded-lg border border-[#cfdeea] bg-[#edf4f9] p-1.5 sm:p-[0.5625rem] shadow-[0_8px_20px_rgba(28,72,109,0.08)]">
+                            <div className="h-full min-h-0 w-full rounded-md border border-[#cfdeea] bg-[#f9fcff]">
                                 <SummaryChart weeklyData={weeklyData} isLoading={isSummaryLoading}/>
                             </div>
                         </div>

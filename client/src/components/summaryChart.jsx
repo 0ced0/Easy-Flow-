@@ -5,10 +5,10 @@ export default function SummaryChart ({weeklyData, isLoading}) {
     if (isLoading) {
         return (
             <div className="h-full min-h-0 flex flex-col gap-[0.9375rem] p-[0.9375rem] animate-pulse">
-                <div className="h-4 w-2/3 rounded bg-slate-200" />
+                <div className="h-4 w-2/3 rounded bg-[#e6eff6]" />
                 <div className="flex flex-1 items-end gap-3 px-3">
                     {[35, 60, 45, 75, 55, 90].map((height, index) => (
-                        <div key={index} className="flex-1 rounded-t bg-slate-200" style={{height: `${height}%`}} />
+                        <div key={index} className="flex-1 rounded-t bg-[#e6eff6]" style={{height: `${height}%`}} />
                     ))}
                 </div>
             </div>
@@ -17,7 +17,7 @@ export default function SummaryChart ({weeklyData, isLoading}) {
 
     return (
         <div className="h-full min-h-0 flex flex-col gap-[0.5625rem] sm:gap-[0.9375rem] py-[0.5625rem] px-[0.375rem] sm:px-[0.9375rem]">
-            <h1 className="shrink-0 text-[0.75rem] sm:text-[1.125rem] text-black/70">
+            <h1 className="shrink-0 text-[0.75rem] sm:text-[1.125rem] text-[#17324c]">
                 Weekly Flow and Density Chart
             </h1>
 
@@ -32,20 +32,21 @@ export default function SummaryChart ({weeklyData, isLoading}) {
             >
                 <CartesianGrid
                     vertical={false}
-                    strokeOpacity={0.2}
+                    stroke="#c7d8e5"
+                    strokeOpacity={0.7}
                     strokeDasharray="3 3"
                 />
 
                 <XAxis
                     dataKey="weekNumber"
-                    tick={{ fontSize: 7.5 }}
+                    tick={{ fontSize: 7.5, fill: '#54708a' }}
                     tickLine={false}
                     axisLine={false}
                 />
 
                 <YAxis
                     width={26.25}
-                    tick={{ fontSize: 7.5 }}
+                    tick={{ fontSize: 7.5, fill: '#54708a' }}
                     tickLine={false}
                     axisLine={false}
                 />
@@ -54,8 +55,10 @@ export default function SummaryChart ({weeklyData, isLoading}) {
                     cursor={false}
                     contentStyle={{
                         borderRadius: "6px",
-                        border: "none",
-                        boxShadow: "0 1.5px 7.5px rgba(0,0,0,0.15)",
+                        border: "1px solid #cfdeea",
+                        backgroundColor: "#f9fcff",
+                        boxShadow: "0 8px 20px rgba(28,72,109,0.12)",
+                        color: "#17324c",
                         fontSize: "9px"
                     }}
                     labelFormatter={(week) => `Week ${week}`}
@@ -76,7 +79,7 @@ export default function SummaryChart ({weeklyData, isLoading}) {
                 <Bar
                     dataKey="averageDensity"
                     name="Density"
-                    className="fill-blue-500/30"
+                    fill="#8dbbd8"
                     barSize={13.5}
                     radius={[2.25, 2.25, 0, 0]}
                     activeBar={{
@@ -88,7 +91,7 @@ export default function SummaryChart ({weeklyData, isLoading}) {
                 <Line
                     dataKey="averageFlow"
                     name="Flow"
-                    className="stroke-blue-600"
+                    stroke="#1c5f9f"
                     strokeWidth={1.5}
                     dot={false}
                     activeDot={{

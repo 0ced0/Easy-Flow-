@@ -4,9 +4,9 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
     const [trafficState, setTrafficState] = useState([])
 
     const stateColor = {
-        "FREE FLOW" : "text-green-500",
-        "SLOWDOWN" : "text-orange-500",
-        "CONGESTED" : "text-red-500"
+        "FREE FLOW" : "text-[#16835e]",
+        "SLOWDOWN" : "text-amber-700",
+        "CONGESTED" : "text-red-700"
     }
 
     useEffect(() => {
@@ -54,32 +54,30 @@ export default function SummaryCard ({currentSummaryData, flowConfiguration, den
 
     if (isLoading) {
         return (
-            <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 p-[0.5625rem] lg:p-[0.375rem] animate-pulse">
-                <div className="h-8 rounded bg-slate-200/70"></div>
-                <div className="mt-[0.28125rem] flex-1 rounded bg-slate-200/50 p-3 space-y-3">
-                    {[1, 2, 3, 4].map((row) => <div key={row} className="h-3 rounded bg-slate-200/70"></div>)}
+            <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 rounded-lg bg-[#f9fcff] p-1 animate-pulse">
+                <div className="h-8 rounded-md bg-[#e6eff6]"></div>
+                <div className="mt-1 flex-1 rounded-md bg-[#f2f7fb] p-3 space-y-3">
+                    {[1, 2, 3, 4].map((row) => <div key={row} className="h-3 rounded bg-[#e6eff6]"></div>)}
                 </div>
             </div>
         )
     }
 
     return(
-    <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 z-10 overflow-hidden lg:overflow-y-auto">
-        {/* BACKGROUND */}
-        <div className="absolute z-50 bg-[#0000FF]/10 inset-0"></div>
-        <div className="inset-0 absolute z-100 flex flex-col p-[0.5625rem] lg:p-[0.375rem] space-y-[0.28125rem] min-w-0">
-            <div className="bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                <p className="p-[0.5625rem] lg:p-[0.375rem] font-medium text-[0.75rem] sm:text-[0.75rem] text-[#363636]">Average Traffic Summary</p>
+    <div className="relative h-auto lg:h-full min-h-48 lg:min-h-0 min-w-0 overflow-hidden rounded-lg bg-[#f9fcff] shadow-[0_8px_20px_rgba(28,72,109,0.1)]">
+        <div className="inset-0 absolute flex flex-col p-[0.5625rem] lg:p-[0.375rem] space-y-[0.28125rem] min-w-0">
+            <div className="rounded-md border border-[#cfdeea] bg-[#f2f7fb]">
+                <p className="p-[0.5625rem] lg:p-[0.375rem] font-medium text-[0.75rem] sm:text-[0.75rem] text-[#17324c]">Average Traffic Summary</p>
             </div>
-            <div className="bg-white flex-1 min-h-0 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
-                <div className="grid grid-cols-4 gap-[0.1875rem] items-center pt-[0.375rem] text-center">
+            <div className="rounded-md border border-[#cfdeea] bg-[#f2f7fb] flex-1 min-h-0">
+                <div className="grid grid-cols-4 gap-[0.1875rem] items-center border-b border-[#cfdeea] py-[0.375rem] text-center">
                     <p className="summaryHeader text-[0.4125rem] sm:text-[0.525rem]">Approach</p>
                     <p className="summaryHeader text-[0.4125rem] sm:text-[0.525rem]">Flow</p>
                     <p className="summaryHeader text-[0.4125rem] sm:text-[0.525rem]">Density</p>
                     <p className="summaryHeader text-[0.4125rem] sm:text-[0.525rem]">State</p>
                 </div>
                 {Object.keys(currentSummaryData).length > 0 ? 
-                    <div className="grid grid-cols-4 gap-1 h-[90%]">
+                    <div className="grid grid-cols-4 gap-1 h-[90%] pb-[0.375rem]">
                         {/* SUMMARY APPROACH */}
                         <div className="summaryContent pl-[0.9375rem] sm:pl-[2.0625rem] md:ml-0 md:pl-[0.375rem] sm:pl-[0.9375rem] space-y-[3vw] md:space-y-1.5 pt-[0.375rem] lg:pb-[0.6rem] text-[0.4125rem] sm:text-[0.45rem] leading-tight lg:flex lg:flex-col lg:justify-between lg:space-y-0">
                             <p>Sambat to LSPU</p>

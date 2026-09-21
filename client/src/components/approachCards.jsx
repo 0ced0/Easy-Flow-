@@ -79,11 +79,13 @@ export default function ApproachCards({approachStates, trafficTiming, densityCon
     const map = useMap()
     const pane = map.getPane('overlayPane')
     const [, setMapVersion] = useState(0)
-    const size = map.getSize()
-    const cardOffsets = size.x < 768 ? mobileCardOffsets : desktopCardOffsets
-    const positions = cardOffsets.map(([x, y]) => (
-        map.containerPointToLatLng([size.x * x, size.y * y])
-    ))
+    const [positions] = useState(() => {
+        const size = map.getSize()
+        const cardOffsets = size.x < 768 ? mobileCardOffsets : desktopCardOffsets
+        return cardOffsets.map(([x, y]) => (
+            map.containerPointToLatLng([size.x * x, size.y * y])
+        ))
+    })
     const trafficLightRows = trafficTiming?.approaches ?? []
     const localTimers = useLocalTrafficCountdown(trafficTiming)
     const cards = [
@@ -95,11 +97,13 @@ export default function ApproachCards({approachStates, trafficTiming, densityCon
 
     useEffect(() => {
         const updateCardCoordinates = () => setMapVersion((version) => version + 1)
-        map.on('zoomend', updateCardCoordinates)
+        map.on('move', updateCardCoordinates)
+        map.on('zoom', updateCardCoordinates)
         map.on('resize', updateCardCoordinates)
 
         return () => {
-            map.off('zoomend', updateCardCoordinates)
+            map.off('move', updateCardCoordinates)
+            map.off('zoom', updateCardCoordinates)
             map.off('resize', updateCardCoordinates)
         }
     }, [map])

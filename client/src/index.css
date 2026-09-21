@@ -20,11 +20,50 @@ body {
 }
 
 :root {
-  background-color: #D8E2ED;
+  background-color: #eaf1f6;
   width: 100%;
   min-height: 100%;
 }
 
 body {
   font-family: "Roboto", sans-serif;
+  background-color: #eaf1f6;
+}
+
+:where(a, button, input, select, textarea) {
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 180ms ease,
+    opacity 150ms ease,
+    transform 120ms ease;
+}
+
+:where(button:not(:disabled), a[role="button"]):active {
+  transform: translateY(1px);
+}
+
+:where(input, select, textarea):focus {
+  transition-duration: 120ms;
+}
+
+tbody tr,
+[role="button"] {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

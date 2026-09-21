@@ -43,7 +43,7 @@ export default function  TrafficLightControlsPage() {
     try{ 
 
         return(
-            <div className="flex flex-col md:flex-row relative w-full h-[100dvh] box-border overflow-hidden p-[0.1875rem] pb-15 md:pb-[0.1875rem] md:space-x-[0.125rem]">
+            <div className="relative flex h-[100dvh] w-full box-border flex-col overflow-hidden bg-[#eaf1f6] p-[0.1875rem] pb-15 md:flex-row md:space-x-[0.125rem] md:pb-[0.1875rem]">
                 <SideBar compact />
                 {configurationReady ? (
                     <TrafficLightControls timerConfiguration={timerConfiguration} densityConfiguration={densityConfiguration} flowConfiguration={flowConfiguration}/>

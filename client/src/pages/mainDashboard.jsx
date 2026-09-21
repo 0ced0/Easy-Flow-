@@ -352,7 +352,7 @@ export default function MainDashboard() {
             )}
             {/* GRID 1 */}
             <SideBar compact />
-            <div className="order-2 md:order-none w-full h-48 shrink-0 md:w-[16.5vw] md:min-w-45 md:h-full md:min-h-0 md:shrink-0 flex flex-col justify-between overflow-hidden bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+            <div className="order-2 md:order-none w-full h-48 shrink-0 md:w-[16.5vw] md:min-w-45 md:h-full md:min-h-0 md:shrink-0 flex flex-col justify-between overflow-hidden rounded-lg border border-[#cfdeea] bg-[#f9fcff] shadow-[4px_0_18px_rgba(28,72,109,0.08)]">
                 {/* <StatCard loc={"Sambat to Patimbao"} statData={stopStatData} vehicleNumbers={stopVehicleNumbers} averageVehicleSpeed={stopAverageVehicleSpeed} condition={approachStates[1]}/> */}
                 <ViolationMonitoring violationData={violationData} setViolationDisplay={setViolationDisplay} isLoading={isViolationLoading} />
             </div>
@@ -362,7 +362,7 @@ export default function MainDashboard() {
             <div className="order-1 md:order-none h-auto min-w-0 min-h-0 flex-none md:flex-1 flex flex-col overflow-visible md:h-full md:overflow-hidden px-[0.1875rem] gap-1.5 md:gap-1">
 
                 {/* MAP */}
-                <div className="relative bg-white text-center h-[41.25vh] min-h-0 md:h-[315px] lg:h-auto lg:min-h-0 lg:flex-1">
+                <div className="relative overflow-hidden rounded-lg border border-[#cfdeea] bg-[#f9fcff] text-center h-[41.25vh] min-h-0 md:h-[315px] lg:h-auto lg:min-h-0 lg:flex-1">
                     <TrafficMap>
                         <ApproachCards approachStates={approachStates} trafficTiming={trafficTiming} densityConfiguration={densityConfiguration} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
                     </TrafficMap>
@@ -371,15 +371,15 @@ export default function MainDashboard() {
 
                 {/* VIOLATION AND LINECHART */}
                 <div className="flex flex-col mb-1.5 sm:mb-0 lg:flex-row lg:h-[clamp(172.5px,21dvh,225px)] lg:min-h-0 lg:flex-none gap-1.5 lg:space-x-1.5 overflow-hidden">
-                    <div className="order-3 lg:order-none bg-white min-h-42 lg:h-full lg:min-h-0 min-w-0 flex-1 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                    <div className="order-3 lg:order-none min-h-42 lg:h-full lg:min-h-0 min-w-0 flex-1">
                         <ViolationDataDisplay violationDisplay={violationDisplay} isLoading={isViolationLoading}/>
                     </div>
-                    <div className="order-1 lg:order-none bg-white min-h-[18rem] sm:min-h-[16.5rem] lg:h-full lg:min-h-0 min-w-0 flex-2 shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                    <div className="order-1 lg:order-none min-h-[18rem] sm:min-h-[16.5rem] lg:h-full lg:min-h-0 min-w-0 flex-2">
                         <StatCard approachFilter={approachFilter} setApproachFilter={setApproachFilter} setDateFilter={setDateFilter} dateFilter={dateFilter} vehicleNumbers={stolVehicleNumbers} averageVehicleSpeed={stolAverageVehicleSpeed} condition={approachStates[0]}/>
                     </div>
 
                     {/* SUMMARY */}
-                    <div className="order-2 lg:order-none flex-1 min-h-48 lg:h-full lg:min-h-0 min-w-0 bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)]">
+                    <div className="order-2 lg:order-none flex-1 min-h-48 lg:h-full lg:min-h-0 min-w-0">
                         <SummaryCard currentSummaryData={currentSummaryData} flowConfiguration={flowConfiguration} densityConfiguration={densityConfiguration} isLoading={isSummaryLoading || densityConfiguration?.length < 4 || flowConfiguration?.length < 4}/>
                     </div>
                 </div>

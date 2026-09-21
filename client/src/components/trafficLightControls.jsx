@@ -171,32 +171,34 @@ function TrafficLightControlsForm({
         return(
             <div className="popUpRoot flex-1 h-full min-h-0 min-w-0 flex">
                 <div className="popUpBackground "></div>
-                <div className="popUpContainerTLC w-[72vw] md:w-[75vw] h-full min-h-0 min-w-0 flex flex-col overflow-hidden">
-                    <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-end gap-[0.5625rem] justify-between py-[0.5625rem] px-[0.75rem] md:pl-15 md:pr-[3.25rem] w-full border-[#D9D9D9]">
-                        <h1 className="font-bold text-[0.9375rem] sm:text-[1.125rem] opacity-[80%]">Traffic Controls Configuration</h1>
+                <div className="popUpContainerTLC h-full min-h-0 min-w-0 w-[72vw] md:w-[75vw] flex flex-col overflow-hidden">
+                    <div className="flex w-full shrink-0 flex-col items-stretch justify-between gap-[0.5625rem] px-[0.75rem] py-[0.5625rem] sm:flex-row sm:items-end md:pl-15 md:pr-[3.25rem]">
+                        <h1 className="text-[0.9375rem] font-semibold text-[#17324c] sm:text-[1.125rem]">Traffic Controls Configuration</h1>
                         <button onClick={() => {
                             const saveConfig = () =>{
                                 handleSave()
                             }
                             saveConfig()
-                            }} className="bg-white px-[0.9375rem] py-[0.375rem] text-[0.75rem] rounded shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] hover:bg-blue-700/20">Save Configuration</button>
+                            }} className="rounded-md bg-[#1c5f9f] px-[0.9375rem] py-[0.375rem] text-[0.75rem] text-white shadow-[0_6px_14px_rgba(28,72,109,0.18)] hover:bg-[#174f84] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1c5f9f]">Save Configuration</button>
                     </div>
 
-                    <div className="controlWorkspace rounded py-3 md:py-6 flex flex-col md:flex-row bg-white shadow-[0px_1px_4px_1px_rgba(0,0,0,0.25)] w-[69vw] md:w-[68vw] flex-1 min-h-0 min-w-0 mx-auto md:ml-15 md:mr-0 overflow-hidden">
-                        <div className="border-b md:border-b-0 md:border-r border-black/10 flex flex-row md:flex-col flex-1 min-h-0 min-w-0 gap-1.5 md:gap-0 px-[0.5625rem] md:pl-[0.9375rem] pt-[0.5625rem] md:pt-[0.9375rem] pb-[0.5625rem] md:pb-0 md:space-y-[1.875rem] overflow-x-auto">
-                            <button className="sideBarOptions" onClick={() => {setOption(0)}}>
-                                <p>Signal Timers</p>
+                    <div className="controlWorkspace mx-auto flex min-h-0 min-w-0 w-[69vw] flex-1 flex-col overflow-hidden rounded-lg border border-[#cfdeea] bg-[#f9fcff] py-3 shadow-[0_8px_20px_rgba(28,72,109,0.08)] md:ml-15 md:mr-0 md:w-[68vw] md:flex-row md:py-6">
+                        <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-x-auto border-b border-[#cfdeea] bg-[#f2f7fb] px-[0.5625rem] pt-[0.5625rem] pb-[0.5625rem] md:flex-col md:gap-0 md:space-y-[1.875rem] md:border-r md:border-b-0 md:px-0 md:pt-[0.9375rem] md:pb-0">
+                            <button className={`sideBarOptions ${option === 0 ? 'sideBarOptionActive' : ''}`} onClick={() => {setOption(0)}}>
+                                <span className="sideBarOptionTitle">Signal Timers</span>
+                                <span className="sideBarOptionDescription">Phase durations</span>
                             </button>
-                            <button className="sideBarOptions" onClick={() => {setOption(1)}}>
-                            <p>Flow Thresholds</p>
-
+                            <button className={`sideBarOptions ${option === 1 ? 'sideBarOptionActive' : ''}`} onClick={() => {setOption(1)}}>
+                                <span className="sideBarOptionTitle">Flow Thresholds</span>
+                                <span className="sideBarOptionDescription">Volume limits</span>
                             </button>
-                            <button className="sideBarOptions" onClick={() => {setOption(2)}}>
-                            <p>Density Thresholds</p>
+                            <button className={`sideBarOptions ${option === 2 ? 'sideBarOptionActive' : ''}`} onClick={() => {setOption(2)}}>
+                                <span className="sideBarOptionTitle">Density Thresholds</span>
+                                <span className="sideBarOptionDescription">Occupancy limits</span>
                             </button>
                         </div>
                         <div className="flex-4 flex flex-col min-h-0 px-1.5 sm:px-[0.9375rem] min-w-0">
-                            <div className="border-b border-black/10 shrink-0 flex py-1.5 px-1.5 sm:px-[0.9375rem] text-[0.9375rem] sm:text-[1.125rem] font-medium text-black/60 items-center">
+                            <div className="flex shrink-0 items-center border-b border-[#cfdeea] px-1.5 py-1.5 text-[0.9375rem] font-medium text-[#17324c] sm:px-[0.9375rem] sm:text-[1.125rem]">
                                 {optionTitles[option]}
                             </div>
                             <div className="flex-1 min-h-0 flex">
@@ -204,7 +206,7 @@ function TrafficLightControlsForm({
                                 {option === 2 ? (
                                 <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                     {/* MAXIMUM FREE FLOW THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Maximum Free Flow Thresholds</h1>
+                                    <h1 className="font-medium text-[#17324c]">Maximum Free Flow Thresholds</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -220,7 +222,7 @@ function TrafficLightControlsForm({
                                         </div>
                                     </div>
                                     {/* MAXIMUM DENSITY THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Maximum Slow Down Thresholds</h1>
+                                    <h1 className="font-medium text-[#17324c]">Maximum Slow Down Thresholds</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -239,7 +241,7 @@ function TrafficLightControlsForm({
                                 ) : option === 1 ? (
                                 <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                     {/* MAXIMUM FREE FLOW THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Maximum Free Flow Thresholds</h1>
+                                    <h1 className="font-medium text-[#17324c]">Maximum Free Flow Thresholds</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -255,7 +257,7 @@ function TrafficLightControlsForm({
                                         </div>
                                     </div>
                                     {/* MAXIMUM DENSITY THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Maximum Slow Down Thresholds</h1>
+                                    <h1 className="font-medium text-[#17324c]">Maximum Slow Down Thresholds</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -274,7 +276,7 @@ function TrafficLightControlsForm({
                                 ) : option === 0 ? (
                                 <div className="gap-3 flex flex-col px-[0.5625rem] sm:px-[1.875rem] py-[0.9375rem] flex-1 min-h-0 w-full overflow-y-auto">
                                 {/* MAXIMUM FREE FLOW THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Free Flow</h1>
+                                    <h1 className="font-medium text-[#17324c]">Free Flow</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -290,7 +292,7 @@ function TrafficLightControlsForm({
                                         </div>
                                     </div>
                                     {/* MAXIMUM DENSITY THRESHOLDS */}
-                                    <h1 className="font-medium text-black/60">Slow Down</h1>
+                                    <h1 className="font-medium text-[#17324c]">Slow Down</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>
@@ -305,7 +307,7 @@ function TrafficLightControlsForm({
                                             <input className="tlcInput" type="number" onChange={(event) => {handleTimerChange(event, 3, "slowdown")}} value={currentTimerConfiguration[3].slowdown}></input>
                                         </div>
                                     </div>
-                                    <h1 className="font-medium text-black/60">Congested</h1>
+                                    <h1 className="font-medium text-[#17324c]">Congested</h1>
                                     <div className="flex w-full justify-between">
                                         <div className="flex flex-col gap-7 items-start">
                                             <h3 className="roads">Sambat to LSPU</h3>

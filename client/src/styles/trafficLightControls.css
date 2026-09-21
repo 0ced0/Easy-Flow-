@@ -10,12 +10,12 @@
     font-weight: 700;
 }
 
-h3 {
+.controlWorkspace h3 {
     color: #4D4D4D;
 }
 
 .roads {
-    color: #4D4D4D;
+    color: #214766;
     font-size: 0.625rem;
     min-height: 1.5rem;
     display: flex;
@@ -23,13 +23,14 @@ h3 {
 }
 
 .tlcInput {
-    background: #f7f8fa;
-    border: 1px solid #d5d9df;
-    border-radius: 3.75px;
+    background: #f9fcff;
+    border: 1px solid #cfdeea;
+    border-radius: 6px;
     width: 3rem;
     height: 1.5rem;
     text-align: center;
-    color: grey;
+    color: #17324c;
+    outline: none;
 }
 
 .tlcInput::-webkit-inner-spin-button {
@@ -52,13 +53,31 @@ h3 {
 }
 
 .sideBarOptions {
+    display: flex;
+    min-width: 9.5rem;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 0.15rem;
     font-size: 0.8rem;
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
 
-    border-radius: 11.25px;
+    border-radius: 6px;
+    color: #54708a;
+    text-align: left;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.sideBarOptionTitle {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.sideBarOptionDescription {
+    font-size: 0.6rem;
+    color: #7891a7;
 }
 
 .controlWorkspace .gap-7 {
@@ -67,8 +86,37 @@ h3 {
 
 .controlWorkspace .gap-3 > h1 {
     margin-bottom: 0.3rem;
+    color: #17324c;
 }
 
 .sideBarOptions:hover {
-    background-color: rgb(201, 200, 200);
+    background-color: #edf4f9;
+    color: #17324c;
+}
+
+.sideBarOptionActive {
+    background-color: #dcebf7;
+    box-shadow: inset 3px 0 0 #1c5f9f;
+    color: #1c5f9f;
+    font-weight: 600;
+}
+
+.sideBarOptionActive .sideBarOptionDescription {
+    color: #54708a;
+}
+
+@media (min-width: 768px) {
+    .sideBarOptions {
+        width: calc(100% - 0.9375rem);
+        min-width: 0;
+        margin-left: 0.46875rem;
+        margin-right: 0.46875rem;
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+    }
+}
+
+.tlcInput:focus {
+    border-color: #1c5f9f;
+    box-shadow: 0 0 0 2px rgba(28, 95, 159, 0.14);
 }
