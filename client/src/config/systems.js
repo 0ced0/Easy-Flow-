@@ -1,0 +1,67 @@
+export const systems = [
+  {
+    id: 'easy-flow',
+    name: 'Easy Flow',
+    purpose: 'Monitor intersection activity, review traffic data, and manage traffic-light configuration from one operational workspace.',
+    tags: ['Live monitoring', 'Traffic analytics', 'Signal controls'],
+    destination: '/dashboard',
+    linkType: 'internal',
+    available: true,
+    status: 'Available now',
+  },
+  {
+    id: 'system-one',
+    name: 'System 01',
+    purpose: 'This system is being documented and will be added to this portal when its application is ready.',
+    tags: ['Coming soon'],
+    destination: null,
+    linkType: 'external',
+    available: false,
+    status: 'In preparation',
+  },
+  {
+    id: 'system-two',
+    name: 'System 02',
+    purpose: 'This system is being documented and will be added to this portal when its application is ready.',
+    tags: ['Coming soon'],
+    destination: null,
+    linkType: 'external',
+    available: false,
+    status: 'In preparation',
+  },
+]
+
+export const easyFlowFeatures = [
+  {
+    id: 'monitoring',
+    title: 'Live intersection monitoring',
+    description: 'View intersection conditions, camera feeds, traffic states, and current vehicle activity in one workspace.',
+    tags: ['Live map', 'Camera feeds'],
+    destination: '/dashboard',
+    icon: 'monitoring',
+  },
+  {
+    id: 'analytics',
+    title: 'Traffic analytics',
+    description: 'Review traffic flow, vehicle counts, density, and historical comparisons for each approach.',
+    tags: ['Monthly data', 'Trend analysis'],
+    destination: '/data_table_page',
+    icon: 'analytics',
+  },
+  {
+    id: 'violations',
+    title: 'Violation records',
+    description: 'Review detected traffic violations and their associated evidence for operational follow-up.',
+    tags: ['Evidence review', 'Violation history'],
+    destination: '/violation_records',
+    icon: 'violations',
+  },
+  {
+    id: 'controls',
+    title: 'Traffic-light controls',
+    description: 'Manage signal timing and traffic thresholds for the monitored intersection approaches.',
+    tags: ['Signal timing', 'Threshold settings'],
+    destination: '/traffic_light_controls_page',
+    icon: 'controls',
+  },
+]

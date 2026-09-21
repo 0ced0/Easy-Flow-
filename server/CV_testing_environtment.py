@@ -37,6 +37,7 @@ from parkingEvents import ParkingEventManager, PARKING_LEVEL_1_SECONDS, PARKING_
 #   1..4    -> focus LSPU / Patimbao / Sunstar / Complex
 #   P/SPACE -> pause/resume
 #   R       -> reset trackers/state for all cameras
+#   E       -> edit parking/violation areas
 #   Q/ESC   -> quit
 #
 # ============================================================
@@ -901,6 +902,9 @@ def draw_edit_mode_overlay(display, edit_state, grid_mode):
                       (0, 255, 255), 3)
 
     if not edit_state.enabled:
+        cv2.putText(display, "E: edit parking/violation areas", (16, display.shape[0] - 18),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 255, 255), 1,
+                    cv2.LINE_AA)
         return
 
     overlay = display.copy()
@@ -1098,6 +1102,9 @@ def main():
         cv2.imshow(window_name, display)
 
         key = cv2.waitKeyEx(1)
+
+        if ord("A") <= key <= ord("Z"):
+            key = ord(chr(key).lower())
 
         if key == ord("q"):
             break

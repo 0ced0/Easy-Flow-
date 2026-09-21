@@ -58,7 +58,24 @@ function useLocalTrafficCountdown(trafficTiming) {
     return timers
 }
 
-export default function ApproachCards({approachStates, trafficTiming, stolStatData, stopStatData, stocStatData, stosStatData}) {
+function getTrafficState(data, cameraId, densityConfiguration) {
+    const density = data?.density
+    const configuration = densityConfiguration?.[cameraId - 1]
+    const freeflowMax = Number(configuration?.freeflow_max)
+    const slowdownMax = Number(configuration?.slowdown_max)
+
+    if (!Number.isFinite(density)
+        || !Number.isFinite(freeflowMax)
+        || !Number.isFinite(slowdownMax)) {
+        return null
+    }
+
+    if (density <= freeflowMax) return 'FREE FLOW'
+    if (density <= slowdownMax) return 'SLOWDOWN'
+    return 'CONGESTED'
+}
+
+export default function ApproachCards({approachStates, trafficTiming, densityConfiguration, stolStatData, stopStatData, stocStatData, stosStatData}) {
     const map = useMap()
     const pane = map.getPane('overlayPane')
     const [, setMapVersion] = useState(0)
@@ -70,10 +87,10 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
     const trafficLightRows = trafficTiming?.approaches ?? []
     const localTimers = useLocalTrafficCountdown(trafficTiming)
     const cards = [
-        {label: 'Sambat to LSPU', data: stolStatData, position: 0, approachIndex: 0},
-        {label: 'Sambat to Patimbao', data: stopStatData, position: 1, approachIndex: 1},
-        {label: 'Sambat to Sunstar', data: stosStatData, position: 3, approachIndex: 3},
-        {label: 'Sambat to Complex', data: stocStatData, position: 2, approachIndex: 2},
+        {label: 'Sambat to LSPU', data: stolStatData, cameraId: 1, position: 0, approachIndex: 0},
+        {label: 'Sambat to Patimbao', data: stopStatData, cameraId: 2, position: 1, approachIndex: 1},
+        {label: 'Sambat to Sunstar', data: stosStatData, cameraId: 3, position: 3, approachIndex: 3},
+        {label: 'Sambat to Complex', data: stocStatData, cameraId: 4, position: 2, approachIndex: 2},
     ]
 
     useEffect(() => {
@@ -95,7 +112,9 @@ export default function ApproachCards({approachStates, trafficTiming, stolStatDa
                 const point = map.latLngToLayerPoint(positions[card.position])
                 const timer = trafficLightRows.length ? (localTimers[card.approachIndex] ?? '--') : '--'
                 const lightColor = trafficLightRows[card.approachIndex]?.state ?? '#A9A9A9'
-                const condition = approachStates[card.approachIndex] ?? 'Unavailable'
+                const condition = getTrafficState(card.data, card.cameraId, densityConfiguration)
+                    ?? approachStates[card.approachIndex]
+                    ?? 'Unavailable'
 
                 return (
                     <div key={card.label} style={{left: point.x, top: point.y, pointerEvents: 'auto'}} className="absolute -translate-x-1/2 -translate-y-1/2">

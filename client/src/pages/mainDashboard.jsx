@@ -364,7 +364,7 @@ export default function MainDashboard() {
                 {/* MAP */}
                 <div className="relative bg-white text-center h-[41.25vh] min-h-0 md:h-[315px] lg:h-auto lg:min-h-0 lg:flex-1">
                     <TrafficMap>
-                        <ApproachCards approachStates={approachStates} trafficTiming={trafficTiming} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
+                        <ApproachCards approachStates={approachStates} trafficTiming={trafficTiming} densityConfiguration={densityConfiguration} stolStatData={stolStatData} stopStatData={stopStatData} stocStatData={stocStatData} stosStatData={stosStatData}/>
                     </TrafficMap>
                     <VideoStream />
                 </div>
