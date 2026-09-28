@@ -161,6 +161,55 @@ def getForecastIntervals(lag: int | None = 12):
         if db is not None and db.is_connected():
             db.close()
 
+
+def saveTrafficForecast(forecastRows: list[dict]) -> bool:
+    if not forecastRows:
+        return True
+
+    db = None
+    cursor = None
+
+    try:
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor()
+        query = """
+            INSERT INTO traffic_forecast (
+                generated_at,
+                forecast_for,
+                forecast_horizon,
+                camera_id,
+                predicted_traffic_flow,
+                predicted_spatial_density
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = [
+            (
+                row["generatedAt"],
+                row["forecastFor"],
+                row["forecastHorizon"],
+                row["cameraId"],
+                row["predictedTrafficFlow"],
+                row.get("predictedSpatialDensity"),
+            )
+            for row in forecastRows
+        ]
+        cursor.executemany(query, values)
+        db.commit()
+        return True
+
+    except Error as error:
+        print(f"Forecast database error: {error}")
+        if db is not None and db.is_connected():
+            db.rollback()
+        return False
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if db is not None and db.is_connected():
+            db.close()
+
 def dbGetMonthlyData(cameraId, month=None):
     started = time.perf_counter()
     connectDuration = 0

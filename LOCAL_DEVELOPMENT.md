@@ -125,3 +125,8 @@ Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue
 Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty OwningProcess |
     ForEach-Object { Stop-Process -Id $_ -Force }
+
+
+
+# CIVICLEAR LINK
+https://ca-civiclear-laravel.livelysea-7e585be2.eastasia.azurecontainerapps.io/

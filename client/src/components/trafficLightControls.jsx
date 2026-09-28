@@ -1,6 +1,6 @@
 import "../styles/trafficLightControls.css"
-import {postTrafficTimersConfig, postDensityConfig, postFlowConfig} from "../hooks/api"
-import {useState} from 'react'
+import {launchCvTestingEnvironment, launchSumoTestingEnvironment, postTrafficTimersConfig, postDensityConfig, postFlowConfig} from "../hooks/api"
+import {useEffect, useState} from 'react'
 
 export default function TrafficLightControls(props) {
     const { timerConfiguration, densityConfiguration, flowConfiguration } = props
@@ -112,6 +112,10 @@ function TrafficLightControlsForm({
         ])
 
         const [option, setOption] = useState(0)
+        const [showSaveConfirmation, setShowSaveConfirmation] = useState(false)
+        const [isLaunchingViolationEditor, setIsLaunchingViolationEditor] = useState(false)
+        const [isLaunchingSumoSimulation, setIsLaunchingSumoSimulation] = useState(false)
+        const [configurationToolMessage, setConfigurationToolMessage] = useState("")
 
         const optionTitles = [
             "Signal Timers",
@@ -119,16 +123,58 @@ function TrafficLightControlsForm({
             "Density Thresholds"
         ]
 
+        useEffect(() => {
+            if (!showSaveConfirmation) return undefined
+            const timeoutId = window.setTimeout(() => setShowSaveConfirmation(false), 4000)
+            return () => window.clearTimeout(timeoutId)
+        }, [showSaveConfirmation])
+
         const handleSave = async () => {
+            setShowSaveConfirmation(false)
             try{
                 const timerResponse = await postTrafficTimersConfig(currentTimerConfiguration)
-                await postDensityConfig(currentDensityConfig)
-                await postFlowConfig(currentFlowConfig)
-                const timerData = await timerResponse.json()
-
-                console.log(timerData)
+                const densityResponse = await postDensityConfig(currentDensityConfig)
+                const flowResponse = await postFlowConfig(currentFlowConfig)
+                if (![timerResponse, densityResponse, flowResponse].every((response) => response?.ok)) {
+                    throw new Error('Unable to save all traffic control settings.')
+                }
+                setShowSaveConfirmation(true)
             }catch(error){
                 console.error(error)
+            }
+        }
+
+        const handleLaunchViolationEditor = async () => {
+            setIsLaunchingViolationEditor(true)
+            setConfigurationToolMessage("")
+
+            try {
+                const response = await launchCvTestingEnvironment()
+                const data = await response.json()
+                if (!response.ok) throw new Error(data.message)
+                setConfigurationToolMessage(data.message)
+            } catch (error) {
+                console.error(error)
+                setConfigurationToolMessage(error.message || "Unable to open the violation-area editor.")
+            } finally {
+                setIsLaunchingViolationEditor(false)
+            }
+        }
+
+        const handleLaunchSumoSimulation = async () => {
+            setIsLaunchingSumoSimulation(true)
+            setConfigurationToolMessage("")
+
+            try {
+                const response = await launchSumoTestingEnvironment()
+                const data = await response.json()
+                if (!response.ok) throw new Error(data.message)
+                setConfigurationToolMessage(data.message)
+            } catch (error) {
+                console.error(error)
+                setConfigurationToolMessage(error.message || "Unable to open the SUMO simulation.")
+            } finally {
+                setIsLaunchingSumoSimulation(false)
             }
         }
 
@@ -172,15 +218,26 @@ function TrafficLightControlsForm({
             <div className="popUpRoot flex-1 h-full min-h-0 min-w-0 flex">
                 <div className="popUpBackground "></div>
                 <div className="popUpContainerTLC h-full min-h-0 min-w-0 w-[72vw] md:w-[75vw] flex flex-col overflow-hidden">
+                    {showSaveConfirmation && (
+                        <div role="status" aria-live="polite" className="fixed right-4 top-4 z-[1000] flex items-center gap-2 rounded-md border border-[#98d7bf] bg-[#effaf5] px-3 py-2 text-[0.75rem] text-[#16704f] shadow-[0_8px_20px_rgba(28,72,109,0.16)]">
+                            <span className="grid size-4 place-items-center rounded-full bg-[#16835e] text-[0.6rem] font-bold text-white" aria-hidden="true">✓</span>
+                            Configuration saved!
+                        </div>
+                    )}
                     <div className="flex w-full shrink-0 flex-col items-stretch justify-between gap-[0.5625rem] px-[0.75rem] py-[0.5625rem] sm:flex-row sm:items-end md:pl-15 md:pr-[3.25rem]">
                         <h1 className="text-[0.9375rem] font-semibold text-[#17324c] sm:text-[1.125rem]">Traffic Controls Configuration</h1>
-                        <button onClick={() => {
+                        <div className="flex flex-wrap justify-end gap-[0.5625rem]">
+                            <button type="button" onClick={handleLaunchViolationEditor} disabled={isLaunchingViolationEditor} className="rounded-md border border-[#1c5f9f] bg-[#f9fcff] px-[0.9375rem] py-[0.375rem] text-[0.75rem] text-[#1c5f9f] shadow-[0_6px_14px_rgba(28,72,109,0.08)] hover:bg-[#edf4f9] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1c5f9f]">{isLaunchingViolationEditor ? "Opening editor..." : "Configure Violation Areas"}</button>
+                            <button type="button" onClick={handleLaunchSumoSimulation} disabled={isLaunchingSumoSimulation} className="rounded-md border border-[#1c5f9f] bg-[#f9fcff] px-[0.9375rem] py-[0.375rem] text-[0.75rem] text-[#1c5f9f] shadow-[0_6px_14px_rgba(28,72,109,0.08)] hover:bg-[#edf4f9] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1c5f9f]">{isLaunchingSumoSimulation ? "Opening simulation..." : "Open SUMO Simulation"}</button>
+                            <button type="button" onClick={() => {
                             const saveConfig = () =>{
                                 handleSave()
                             }
                             saveConfig()
                             }} className="rounded-md bg-[#1c5f9f] px-[0.9375rem] py-[0.375rem] text-[0.75rem] text-white shadow-[0_6px_14px_rgba(28,72,109,0.18)] hover:bg-[#174f84] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1c5f9f]">Save Configuration</button>
+                        </div>
                     </div>
+                    {configurationToolMessage && <p role="status" className="shrink-0 px-[0.75rem] text-[0.75rem] text-[#54708a] md:pl-15">{configurationToolMessage}</p>}
 
                     <div className="controlWorkspace mx-auto flex min-h-0 min-w-0 w-[69vw] flex-1 flex-col overflow-hidden rounded-lg border border-[#cfdeea] bg-[#f9fcff] py-3 shadow-[0_8px_20px_rgba(28,72,109,0.08)] md:ml-15 md:mr-0 md:w-[68vw] md:flex-row md:py-6">
                         <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-x-auto border-b border-[#cfdeea] bg-[#f2f7fb] px-[0.5625rem] pt-[0.5625rem] pb-[0.5625rem] md:flex-col md:gap-0 md:space-y-[1.875rem] md:border-r md:border-b-0 md:px-0 md:pt-[0.9375rem] md:pb-0">

@@ -28,28 +28,10 @@
     border-radius: 6px;
     width: 3rem;
     height: 1.5rem;
+    padding-left: 0.75rem;
     text-align: center;
     color: #17324c;
     outline: none;
-}
-
-.tlcInput::-webkit-inner-spin-button {
-    appearance: none;
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.tlcInput:hover::-webkit-inner-spin-button {
-    appearance: none;
-    -webkit-appearance: none;
-    margin: 0;
-    text-align: center;
-}
-
-.tlcInput:focus::-webkit-inner-spin-button {
-    appearance: none;
-    -webkit-appearance: none;
-    margin: 0;
 }
 
 .sideBarOptions {

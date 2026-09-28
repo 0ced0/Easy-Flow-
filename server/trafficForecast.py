@@ -4,8 +4,9 @@ import torch
 from pathlib import Path
 import sys
 import numpy as np
+from datetime import datetime, timedelta
 
-from database.databaseConnector import getForecastIntervals
+from database.databaseConnector import getForecastIntervals, saveTrafficForecast
 
 
 
@@ -243,11 +244,11 @@ class forecastingComponent:
             axis=0,
         )
 
-        return torch.from_numpy(forecasting_array)
+        return torch.from_numpy(forecasting_array), timestamps[-1]
 
     def produceForecast(self):
 
-        data = self.prepareForecastingData()
+        data, latestInterval = self.prepareForecastingData()
 
         with torch.no_grad():
             data = data.to(device)
@@ -261,7 +262,25 @@ class forecastingComponent:
                 normalizedOutput
             )
 
-        return output.detach().cpu().tolist()
+        forecast = output.detach().cpu().tolist()
+        generatedAt = datetime.now()
+        forecastRows = []
+
+        for horizonIndex, horizonForecast in enumerate(forecast[0], start=1):
+            forecastFor = latestInterval + timedelta(seconds=30 * horizonIndex)
+            for cameraIndex, cameraForecast in enumerate(horizonForecast):
+                forecastRows.append({
+                    "generatedAt": generatedAt,
+                    "forecastFor": forecastFor,
+                    "forecastHorizon": horizonIndex,
+                    "cameraId": self.nodeOrder[cameraIndex],
+                    "predictedTrafficFlow": float(cameraForecast[0]),
+                })
+
+        if not saveTrafficForecast(forecastRows):
+            print("Forecast was generated but could not be saved.")
+
+        return forecast
 
 
 

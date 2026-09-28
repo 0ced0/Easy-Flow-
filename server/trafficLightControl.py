@@ -4,6 +4,9 @@ import time
 from flask import Blueprint, request, jsonify
 import threading
 import os
+from pathlib import Path
+import subprocess
+import sys
 
 
 CONTROLLER_TICK_SECONDS = 1.0
@@ -18,6 +21,53 @@ TLC_TRACE = os.environ.get("EASYFLOW_TLC_TRACE", "").strip().lower() == "true"
 CONTROLLER_CAMERA_IDS = (1, 2, 4, 3)
 
 intersectionTimers = Blueprint("intersectionTimers", __name__)
+cvTestingEnvironmentProcess = None
+cvTestingEnvironmentLock = threading.Lock()
+sumoTestingEnvironmentProcess = None
+sumoTestingEnvironmentLock = threading.Lock()
+
+
+@intersectionTimers.route('/launch_cv_testing_environment', methods=['POST'])
+def launch_cv_testing_environment():
+    """Launch the local desktop editor used to configure violation areas."""
+    global cvTestingEnvironmentProcess
+
+    if os.environ.get("EASYFLOW_ENV", "").strip().lower() != "local":
+        return jsonify({"message": "The violation-area editor is available only in the local environment."}), 403
+
+    with cvTestingEnvironmentLock:
+        if cvTestingEnvironmentProcess is not None and cvTestingEnvironmentProcess.poll() is None:
+            return jsonify({"message": "The violation-area editor is already open."})
+
+        scriptPath = Path(__file__).with_name("CV_testing_environtment.py")
+        cvTestingEnvironmentProcess = subprocess.Popen(
+            [sys.executable, str(scriptPath)],
+            cwd=scriptPath.parent,
+        )
+
+    return jsonify({"message": "The violation-area editor has been opened."})
+
+
+@intersectionTimers.route('/launch_sumo_testing_environment', methods=['POST'])
+def launch_sumo_testing_environment():
+    """Launch the local SUMO GUI that mirrors the traffic-light controller."""
+    global sumoTestingEnvironmentProcess
+
+    if os.environ.get("EASYFLOW_ENV", "").strip().lower() != "local":
+        return jsonify({"message": "The SUMO simulation is available only in the local environment."}), 403
+
+    with sumoTestingEnvironmentLock:
+        if sumoTestingEnvironmentProcess is not None and sumoTestingEnvironmentProcess.poll() is None:
+            return jsonify({"message": "The SUMO simulation is already open."})
+
+        scriptPath = Path(__file__).resolve().parent.parent / "simulation" / "SUMO_testing_environment.py"
+        controllerUrl = f"{request.host_url.rstrip('/')}/get_intersection_timers"
+        sumoTestingEnvironmentProcess = subprocess.Popen(
+            [sys.executable, str(scriptPath), "--follow-url", controllerUrl],
+            cwd=scriptPath.parent,
+        )
+
+    return jsonify({"message": "The SUMO simulation has been opened."})
 
 def trafficThresholds(traffic):
 

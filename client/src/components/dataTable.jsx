@@ -1,17 +1,40 @@
 import {getDailyData} from "../hooks/api"
-import {useEffect, useState} from "react"
+import {useEffect, useRef, useState} from "react"
 
 export default function DataTable({cameraId, dataTable, setDailyData, setPage, page, monthFilter, isLoading, setIsLoading}) {
-    const [hasNextPage, setHasNextPage] = useState(true)
+    const [hasNextPage, setHasNextPage] = useState(false)
+    const hasFinishedInitialLoad = useRef(false)
+
+    if (!isLoading) hasFinishedInitialLoad.current = true
 
     useEffect(() => {
-        setHasNextPage(true)
+        let isCurrent = true
+
+        const checkForNextPage = async () => {
+            try {
+                const response = await getDailyData(cameraId, page + 1, monthFilter)
+                const nextPageData = await response.json()
+                if (isCurrent) setHasNextPage(nextPageData.length >= 1)
+            } catch (error) {
+                if (isCurrent) {
+                    console.error(error)
+                    setHasNextPage(false)
+                }
+            }
+        }
+
+        setHasNextPage(false)
+        checkForNextPage()
+
+        return () => {
+            isCurrent = false
+        }
     }, [cameraId, monthFilter, page])
 
     try{
         const handlePage = async (action) => {
             const targetPage = page + action
-            if (targetPage < 1) return
+            if (targetPage < 1 || (action > 0 && !hasNextPage)) return
 
             try {
                 setIsLoading(true)
@@ -32,7 +55,7 @@ export default function DataTable({cameraId, dataTable, setDailyData, setPage, p
          
         // console.log(dataTable)
 
-        if (isLoading) {
+        if (isLoading && !hasFinishedInitialLoad.current) {
             return(
                 <div className="h-full p-[0.5625rem] sm:p-[0.9375rem] animate-pulse">
                     <div className="h-5 w-1/3 rounded bg-[#e6eff6]" />
@@ -103,7 +126,7 @@ export default function DataTable({cameraId, dataTable, setDailyData, setPage, p
                         {/* <div className="">2</div>
                         <div className="">3</div> */}
 
-                        <button disabled={!hasNextPage} onClick={() => handlePage(1)} className="rounded border border-[#cfdeea] bg-[#f9fcff] p-[0.1875rem] hover:bg-[#edf4f9] disabled:cursor-not-allowed disabled:opacity-40">
+                        <button onClick={() => handlePage(1)} className="rounded border border-[#cfdeea] bg-[#f9fcff] p-[0.1875rem] hover:bg-[#edf4f9]">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-[1.125rem]">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                             </svg>

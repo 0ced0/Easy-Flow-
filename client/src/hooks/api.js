@@ -233,6 +233,17 @@ export const postFlowConfig = async (flowConfiguration) => {
     }
 }
 
+export const launchCvTestingEnvironment = async () => {
+    return fetch(`${BACKEND_BASE_URL}/launch_cv_testing_environment`, {
+        method: 'POST'
+    })
+}
+
+export const launchSumoTestingEnvironment = async () => {
+    return fetch(`${BACKEND_BASE_URL}/launch_sumo_testing_environment`, {
+        method: 'POST'
+    })
+}
 
 // GET FLOW THRESHOLDS API
 export const getFlowConfig = async () => {
